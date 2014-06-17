@@ -1,0 +1,592 @@
+        <h2 id="files">Files</h2>
+        <p>DynASM consists of several files, some of which are Lua files, and some of which are C.</p>
+        <hr>
+        <h3 id="dynasm.lua">dynasm.lua</h3>
+        <p>This file forms the core of the DynASM preprocessor. It takes a DynASM source file
+           (which is a mixture of assembly and C) file as input, and produces a C file as output,
+           therein performing the bulk of the conversion from assembly to machine code. Lines from
+           the DynASM source file that do not start with a vertical bar are copied verbatim to
+           the output file. Lines that start with one vertical bar can contain assembly instructions
+           or <a href="#directives">assembler directives</a>, and will generally be rewritten to C
+           lines of the form <code><a href="#dasm_put">dasm_put</a>(Dst, ...)</code>. Lines that
+           start with two vertical bars are treated as C code, but undergo prepreprocessor substitutions
+           created by <code><a href="#.define">.define</a></code>, and can be part of
+           <code><a href="#.macro">.macro</a></code> definitions.</p>
+        <p>If a Lua interpreter with a <code>bit</code> library (such as LuaJIT) is present, dynasm.lua can be invoked with a command like:</p>
+        <pre>$ lua dynasm.lua FLAGS INFILE.dasc</pre>
+        <p>If the presence of such a Lua interpreter cannot be assumed, LuaJIT2's minilua can be built and used to invoke dynasm.lua:</p>
+        <pre>$ cd LUAJIT2_ROOT/dynasm
+$ gcc -o minilua ../src/host/minilua.c
+$ ./minilua dynasm.lua FLAGS INFILE.dasc</pre>
+        <p>The available flags are:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Short</th><th>Long</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>-h</code></td><td><code>--help</code></td><td>Display help text similar to this table.</td></tr>
+          <tr><td><code>-v</code></td><td><code>--version</code></td><td>Display version and copyright information.</td></tr>
+          <tr><td><code>-o&nbsp;<em>FILE</em></code></td><td><code>--outfile&nbsp;<em>FILE</em></code></td><td>Set the output file name (defaults to stdout if not given).</td></tr>
+          <tr><td><code>-I&nbsp;<em>DIR</em></code></td><td><code>--include&nbsp;<em>DIR</em></code></td><td>Add a directory to the <a href="#.include">.include</a> search path.</td></tr>
+          <tr><td><code>-c</code></td><td><code>--ccomment</code></td><td>Use C style <code>/* */</code> comments for assembler lines in output.</td></tr>
+          <tr><td><code>-C</code></td><td><code>--cppcomment</code></td><td>Use C++ style <code>//</code> comments for assembler lines in output (the default).</td></tr>
+          <tr><td><code>-N</code></td><td><code>--nocomment</code></td><td>Suppress assembler lines in output.</td></tr>
+          <tr><td><code>-M</code></td><td><code>--maccomment</code></td><td>Show macro expansions as comments in output (default off).</td></tr>
+          <tr><td><code>-L</code></td><td><code>--nolineno</code></td><td>Do not emit C preprocessor <code>#line</code> directives in output (default on).</td></tr>
+          <tr><td><code>-F</code></td><td><code>--flushline</code></td><td>Do not aggressively coalesce adjacent <code><a href="#dasm_put">dasm_put</a></code> calls in output (default on).</td></tr>
+          <tr><td colspan="2"><code>-D&nbsp;<em>NAME</em>[=<em>SUBST</em>]</code></td><td>Equivalent to <code><a href="#.define">.define <em>NAME</em> [, <em>SUBST</em>]</a></code>.</td></tr>
+          <tr><td colspan="2"><code>-U&nbsp;<em>NAME</em></code></td><td>Undefines a prior <code>-D <em>NAME</em></code>.</td></tr>
+          <tr><td><code>-P</code></td><td><code>--dumpdef</code></td><td>Dump defines, macros, etc. Repeat for more output.</td></tr>
+          <tr><td><code>-A&nbsp;<em>ARCH</em></code></td><td><code>--dumparch&nbsp;<em>ARCH</em></code></td><td>Load architecture <em>ARCH</em> and dump description, similar to the instruction listing page.</td></tr>
+        </tbody>
+        </table>
+        <p>If <code>-A <em>ARCH</em></code> or <code><a href="#.arch">.arch <em>ARCH</em></a></code> is used, dynasm.lua will load the architecture module dasm_<em>ARCH</em>.lua.
+           Furthermore, the architecture module dasm_x64.lua will load the architecture module dasm_x86.lua. This set of two or three Lua files form the complete DynASM
+           preprocessor for the given architecture. Said files are only required for converting DynASM source files to plain C files; there is no runtime requirement on
+           them or on a Lua interpreter.</p>
+        <hr>
+        <h3 id="dasm_proto.h">dasm_proto.h</h3>
+        <p>This C header file contains the default definitions for <a href="#macros">various macros</a> and the type signatures
+           for <a href="#functions">various functions</a>, which collectively form the DynASM runtime library. It should be pulled
+           in by a <code>#include</code> directive in every C/C++ file that wants to use DynASM to generate machine code.</p>
+        <p>If custom definitions of any macros are desired, said macros should be defined prior to dasm_proto.h being included.
+           If multiple files <code>#include</code> dasm_proto.h, then they should all consistently <code>#define</code> any
+           custom macro definitions. For this reason, if DynASM is used from multiple files, it is conventional to write a
+           header which wraps dasm_proto.h and provides the custom macro definitions.</p>
+        <hr>
+        <h3 id="dasm_x86.h">dasm_x86.h</h3>
+        <p>This C file contains the implementations of the <a href="#functions">various functions</a> in the DynASM runtime library.
+           It should be pulled in by a <code>#include</code> directive in precisely one C/C++ file, and said directive must be preceded
+           by a <code>#include</code> directive for <a href="#dasm_proto.h">dasm_proto.h</a>.</p>
+        <p>If DynASM is being used for an architecture other than x86 or x64, that architecture's corresponding header should be pulled in
+           instead of dynasm_x86.h, though this documentation does not cover such uses of DynASM in detail.</p>
+        <hr>
+        <h2 id="macros">Macros</h2>
+        <p>A selection of macros can be defined at compile-time to modify the behaviour of
+           DynASM. If the default definition for a particular macro isn't appropriate, it
+           should be redefined prior to including any DynASM headers.</p>
+        <hr>
+        <h3 id="DASM_ALIGNED_WRITES">DASM_ALIGNED_WRITES</h3>
+        <p>If defined (to any value), <a href="#dasm_x86.h">dasm_x86.h</a> will use multiple
+           byte-granularity writes rather than a single multi-byte write
+           in cases where the destination of the write might not be aligned.</p>
+        <p>This should be defined when emitting x86/x64 machine code on a
+           host platform other than x86/x64.</p>
+        <hr>
+        <h3 id="DASM_CHECKS">DASM_CHECKS</h3>
+        <p>If defined (to any value), the implementations of
+           <code><a href="#dasm_link">dasm_link</a></code>,
+           <code><a href="#dasm_encode">dasm_encode</a></code>, and
+           <code><a href="#dasm_checkstep">dasm_checkstep</a></code> in
+           <a href="#dasm_x86.h">dasm_x86.h</a> will perform additional
+           sanity checking to ensure that DynASM is being used correctly.</p>
+        <p>If encoding speed is a concern, it might be desirable to define <code>DASM_CHECKS</code> during
+           development and in debug builds, and undefine it otherwise.</p>
+        <hr>
+        <h3 id="DASM_EXTERN">DASM_EXTERN</h3>
+        <pre class="macro-default" data-name="DASM_EXTERN">#define DASM_EXTERN(ctx, addr, idx, type) 0</pre>
+        <p>This user-defined macro is used by <a href="#dasm_x86.h">dasm_x86.h</a> when
+           <code><a href="#dasm_encode">dasm_encode</a></code> needs to encode an extern address, and
+           must be redefined if extern addresses are used.</p>
+        <p>The <code>ctx</code> parameter has the same type as the variable defined by
+           <code><a href="#Dst_DECL">Dst_DECL</a></code>, and will be set to the first argument
+           to <code><a href="#dasm_encode">dasm_encode</a></code>.</p>
+        <p>The <code>addr</code> parameter has type <code>unsigned char*</code>, and gives the
+           address of a <code>int32_t</code> field which is to be written as part of an x86/x64
+           instruction.</p>
+        <p>The <code>idx</code> parameter has type <code>unsigned int</code>, and gives an
+           index into the <code><a href="#.externnames">.externnames</a></code> array, therein
+           identifying the particular extern address being written.</p>
+        <p>The <code>type</code> parameter is non-zero to indicate that the <code>int32_t</code> field
+           being written represents a signed 32-bit relative offset from the end of the instruction
+           being encoded (i.e. relative to <code>addr+4</code>). It is zero to indicate an absolute address
+           <span class="badge">x86</span>, or an absolute address in the low 2GB of address space
+           <span class="badge">x64</span>.</p>
+         <p>The macro should evaluate to a 32-bit integer value, which will subsequently be written
+            to <code>(int32_t*)addr</code>.</p>
+         <p>For example, if extern names are dynamically findable symbols, this might be defined as:</p>
+         <pre>#define DASM_EXTERN(ctx, addr, idx, type) (\
+    (type) ? (int)((unsigned char*)dlsym(RTLD_DEFAULT, externs[idx]) - (addr) - 4) \
+           : (int)dlsym(RTLD_DEFAULT, externs[idx]))</pre>
+        <hr>
+        <h3 id="DASM_FDEF">DASM_FDEF</h3>
+        <pre class="macro-default" data-name="DASM_FDEF">#define DASM_FDEF extern</pre>
+        <p>This user-defined macro is used to control the specifiers on all <code>dasm_</code>
+           functions. For example, Windows applications which embed DynASM within a shared
+           library might redefine this to either <code>__declspec(dllimport)</code> or
+           <code>__declspec(dllexport)</code>. Conversely, Linux applications which use DynASM
+           in just one place and don't want to pollute the symbol namespace might redefine
+           this to <code>__attribute__((visibility("hidden")))</code> or just <code>static</code>.</p>
+        <hr>
+        <h3 id="DASM_M_FREE">DASM_M_FREE</h3>
+        <pre class="macro-default" data-name="DASM_M_FREE">#define DASM_M_FREE(ctx, p, sz) free(p)</pre>
+        <p>This user-defined macro is used by <a href="#dasm_x86.h">dasm_x86.h</a> in order to
+           implement <code><a href="#dasm_free">dasm_free</a></code> and free pieces of memory
+           previously allocated by <code><a href="#DASM_M_GROW">DASM_M_GROW</a></code>.</p>
+        <p>The <code>ctx</code> parameter has the same type as the variable defined by
+           <code><a href="#Dst_DECL">Dst_DECL</a></code>, and will be set to the first argument
+           to <code><a href="#dasm_free">dasm_free</a></code>.</p>
+        <p>On entry, the <code>p</code> and <code>sz</code> arguments will match the <code>p</code>
+           and <code>sz</code> arguments from the exit of a prior invocation of
+           <code><a href="#DASM_M_GROW">DASM_M_GROW</a></code>, i.e. <code>p</code> gives a pointer
+           to the memory which needs to be freed, and <code>sz</code> gives the number of bytes
+           previously allocated at <code>p</code>.</p>
+        <hr>
+        <h3 id="DASM_M_GROW">DASM_M_GROW</h3>
+        <pre class="macro-default" data-name="DASM_M_GROW">#define DASM_M_GROW(ctx, t, p, sz, need) \
+  do { \
+    size_t _sz = (sz), _need = (need); \
+    if (_sz &lt; _need) { \
+      if (_sz &lt; 16) _sz = 16; \
+      while (_sz &lt; _need) _sz += _sz; \
+      (p) = (t *)realloc((p), _sz); \
+      if ((p) == NULL) exit(1); \
+      (sz) = _sz; \
+    } \
+  } while(0)</pre>
+        <p>This user-defined macro is used by <a href="#dasm_x86.h">dasm_x86.h</a> whenever
+           memory needs to be allocated or re-allocated - which
+           <code><a href="#dasm_init">dasm_init</a></code> always needs to, and various
+           other <code>dasm_</code> functions sometimes need to. It should be redefined,
+           along with <code><a href="#DASM_M_FREE">DASM_M_FREE</a></code>, when the default
+           C <code>realloc</code>/<code>free</code> allocation mechanism isn't appropriate.</p>
+        <p>The <code>ctx</code> parameter has the same type as the variable defined by
+           <code><a href="#Dst_DECL">Dst_DECL</a></code>, and will be set to the first argument
+           to the <code>dasm_</code> function performing the allocation.</p>
+        <p>On entry, the <code>p</code> argument gives an lvalue of type <code>t*</code>
+           which is <code>sz</code> bytes in size. In particular, note that <code>sz</code>
+           can be zero to indicate an allocation operation should be performed (in which case
+           <code>p</code> will be <code>NULL</code>), or non-zero to indicate that a
+           re-allocation operation should be performed (in which case <code>p</code> will not
+           be <code>NULL</code>).</p>
+        <p>Upon exit, the <code>p</code> argument should give an lvalue of type <code>t*</code>
+           which is at least <code>need</code> bytes in size, and the <code>sz</code> argument
+           should give an lvalue containing the actual number of bytes.</p>
+        <hr>
+        <h3 id="Dst_DECL">Dst_DECL</h3>
+        <pre class="macro-default" data-name="Dst_DECL">#define Dst_DECL dasm_State **Dst</pre>
+        <p>This user-defined macro affects the signature of all <code>dasm_</code> functions,
+           in particular giving the type and name of the first formal parameter. The name of
+           said parameter must either remain as <code>Dst</code>, or there must be a preprocessor
+           macro which redefines <code>Dst</code> to match the name used here. The type of
+           said parameter can be anything that allows <code><a href="#Dst_REF">Dst_REF</a></code>
+           to give an lvalue of type <code>dasm_State*</code>.</p>
+        <p>By convention, non-trivial users of DynASM that have a collection of state tied
+           to a <code>dasm_State*</code> will define a structure containing a <code>dasm_State*</code>
+           and the related state, and will redefine <code>Dst_DECL</code> to be pointer to
+           said structure.</p>
+        <p>For example, when using DynASM within a C++ project, the following definitions might be
+           used to ensure RAII semantics and to pass other fields to emitter functions:</p>
+        <pre>struct my_dasm_State {
+  my_dasm_State(int maxsection) {
+    dasm_init(this, maxsection);
+  }
+  ~my_dasm_State() {
+    dasm_free(this);
+  }
+  struct dasm_State* ds;
+  /* ... other fields ... */
+};
+#define Dst_DECL my_dasm_State* Dst
+#define Dst_REF Dst->ds</pre>
+        <hr>
+        <h3 id="Dst_REF">Dst_REF</h3>
+        <pre class="macro-default" data-name="Dst_REF">#define Dst_REF (*Dst)</pre>
+        <p>This user-defined macro is used by <a href="#dasm_x86.h">dasm_x86.h</a> to
+           extract an lvalue of type <code>dasm_State*</code> from a variable called
+           <code>Dst</code>. It should be redefined if, and only if,
+           <code><a href="#Dst_DECL">Dst_DECL</a></code> is also redefined.</p>
+        <hr>
+        <h2 id="functions">Functions</h2>
+        <p>The DynASM API consists of 10 functions, which must be used in a fairly
+           strict order:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Phase</th><th>Callable Functions</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><code><a href="#dasm_init">dasm_init</a></code></td></tr>
+          <tr><td>2</td><td><code><a href="#dasm_setupglobal">dasm_setupglobal</a></code></td></tr>
+          <tr><td>3</td><td><code><a href="#dasm_setup">dasm_setup</a></code></td></tr>
+          <tr><td>4</td><td>Any of <code><a href="#dasm_checkstep">dasm_checkstep</a></code>, <code><a href="#dasm_growpc">dasm_growpc</a></code>, <code><a href="#dasm_put">dasm_put</a></code>, each zero or more times</td></tr>
+          <tr><td>5</td><td><code><a href="#dasm_link">dasm_link</a></code></td></tr>
+          <tr><td>6</td><td><code><a href="#dasm_encode">dasm_encode</a></code></td></tr>
+          <tr><td>7</td><td><code><a href="#dasm_getpclabel">dasm_getpclabel</a></code>, zero or more times</td></tr>
+          <tr><td>8</td><td><code><a href="#dasm_free">dasm_free</a></code></td></tr>
+        </tbody>
+        </table>
+        <hr>
+        <h3 id="dasm_checkstep">dasm_checkstep</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> int dasm_checkstep(<a href="#Dst_DECL">Dst_DECL</a>, int secmatch);</pre>
+        <p>This function can be called after a sequence of calls to <code><a href="#dasm_put">dasm_put</a></code> to
+           perform extra sanity checking.</p>
+        <p>If <code><a href="#DASM_CHECKS">DASM_CHECKS</a></code> is defined, and a prior call to <code><a href="#dasm_put">dasm_put</a></code>
+           encountered an error, this function will return a non-zero result indicating the error.</p>
+        <p>If <code><a href="#DASM_CHECKS">DASM_CHECKS</a></code> is defined, and any of the labels <code>1:</code> through
+           <code>9:</code> have been referenced but not defined, this function will return <code>DASM_S_UNDEF_L|i</code>,
+           where <code>i</code> is the problematic label number. If there are no problems with the labels, then
+           this function will undefine the labels <code>1:</code> through <code>9:</code>.</p>
+        <p>If <code><a href="#DASM_CHECKS">DASM_CHECKS</a></code> is defined, the <code>secmatch</code> argument is
+           non-negative, and the index of the section currently being written (see <code><a href="#.section">.section</a></code>)
+           isn't equal to <code>secmatch</code>, then this function will return <code>DASM_S_MATCH_SEC|i</code>, where
+           <code>i</code> is the index of the current section.</p>
+        <p>Otherwise, this function will return the value <code>0</code> to indicate success.</p>
+        <hr>
+        <h3 id="dasm_encode">dasm_encode</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> int dasm_encode(<a href="#Dst_DECL">Dst_DECL</a>, void *buffer);</pre>
+        <p>This function is called after <code><a href="#dasm_link">dasm_link</a></code> in order to actually generate
+           machine code.</p>
+        <p>On entry, the <code>buffer</code> argument should point to a block of memory whose size in bytes is at
+           least the size returned by <code><a href="#dasm_link">dasm_link</a></code>. For the duration of the
+           call to <code>dasm_encode</code>, this block of memory must be at least readable and writable.</p>
+        <p>On exit, the block of memory at <code>buffer</code> will have been filled with machine code, and the globals
+           array passed to <code><a href="#dasm_setupglobal">dasm_setupglobal</a></code> will have been populated with
+           pointers into said block. If the machine code is to be executed (as opposed to just written to disk), then the
+           block of memory needs to be at least readable and executable after <code>dasm_encode</code>. Operating system APIs such as
+           <code><a href="http://msdn.microsoft.com/en-gb/library/windows/desktop/aa366898(v=vs.85).aspx">VirtualProtect</a></code>
+           (Windows) or <code><a href="http://pubs.opengroup.org/onlinepubs/009696799/functions/mprotect.html">mprotect</a></code>
+           (POSIX) may be appropriate for marking memory as executable.</p>
+        <p>This function should always return <code>0</code>, but it can return non-zero if a DynASM bug is triggered.</p>
+        <hr>
+        <h3 id="dasm_free">dasm_free</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> void dasm_free(<a href="#Dst_DECL">Dst_DECL</a>);</pre>
+        <p>This function frees a DynASM state previously allocated by <code><a href="#dasm_init">dasm_init</a></code>.
+           Its behaviour can be modified by redefining <code><a href="#DASM_M_FREE">DASM_M_FREE</a></code>.</p>
+        <hr>
+        <h3 id="dasm_getpclabel">dasm_getpclabel</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> int dasm_getpclabel(<a href="#Dst_DECL">Dst_DECL</a>, unsigned int pc);</pre>
+        <p>This function can be called after <code><a href="#dasm_encode">dasm_encode</a></code> in order to retreive the
+           address of the label <code>=&gt;pc:</code>.</p>
+        <p>On success, the return value is the non-negative offset from the start of the buffer passed to
+           <code><a href="#dasm_encode">dasm_encode</a></code> to the label <code>=&gt;pc:</code>.</p>
+        <p>On error (for example <code>=&gt;pc:</code> not being defined), the return value is negative.</p>
+        <hr>
+        <h3 id="dasm_growpc">dasm_growpc</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> void dasm_growpc(<a href="#Dst_DECL">Dst_DECL</a>, unsigned int maxpc);</pre>
+        <p>This function can be called after <code><a href="#dasm_setup">dasm_setup</a></code> and before
+           <code><a href="#dasm_link">dasm_link</a></code> in order to increase the number of labels usable
+           with the <code>=&gt;pc</code> syntax. In particular, after a call to this function, the labels
+           <code>=&gt;0</code> through <code>=&gt;(maxpc-1)</code> can be used.</p>
+        <hr>
+        <h3 id="dasm_init">dasm_init</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> void dasm_init(<a href="#Dst_DECL">Dst_DECL</a>, int maxsection);</pre>
+        <p>This function performs the first stage of initialisation of a DynASM state. Its behaviour can be modified by
+           redefining <code><a href="#DASM_M_GROW">DASM_M_GROW</a></code>.</p></p>
+        <p>If <code><a href="#.section">.section</a></code> is used, then <code>DASM_MAXSECTION</code> should be
+           passed as <code>maxsection</code>. Otherwise, the value <code>1</code> should be passed.</p>
+        <p>A call to this function must be followed by a call to <code><a href="#dasm_setupglobal">dasm_setupglobal</a></code>
+           to perform the second stage of initialisation, and at some point later <code><a href="#dasm_free">dasm_free</a></code>
+           should be called to free the DynASM state.</p>
+        <hr>
+        <h3 id="dasm_link">dasm_link</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> int dasm_link(<a href="#Dst_DECL">Dst_DECL</a>, size_t *szp);</pre>
+        <p>This function is called prior to <code><a href="#dasm_encode">dasm_encode</a></code> to calculate the size
+           of the machine code that will be generated. Consumers of the API will typically call <code>dasm_link</code>,
+           allocate a suitably sized piece of memory, and then call <code><a href="#dasm_encode">dasm_encode</a></code>.</p>
+        <p>If <code><a href="#DASM_CHECKS">DASM_CHECKS</a></code> is defined, and a prior call to <code><a href="#dasm_put">dasm_put</a></code>
+           or <code><a href="#dasm_checkstep">dasm_checkstep</a></code> encountered an error, this function will return
+           a non-zero result indicating the error. If <code><a href="#DASM_CHECKS">DASM_CHECKS</a></code> is defined, and
+           the label <code>=&gt;pc</code> is used but not defined, this function will return <code>DASM_S_UNDEF_PC|pc</code>.
+           In all other cases, this function will return the value <code>0</code> to indicate success.</p>
+        <hr>
+        <h3 id="dasm_put">dasm_put</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> void dasm_put(<a href="#Dst_DECL">Dst_DECL</a>, int start, ...);</pre>
+        <p>Lines in DynASM source files that start with one vertical bar are translated into calls to <code>dasm_put</code>
+           by the <a href="#dynasm.lua">dynasm.lua</a> preprocessor. Conceptually, calls to this function are appending
+           some assembly code to the DynASM state which <code><a href="#dasm_encode">dasm_link</a></code> /
+           <code><a href="#dasm_encode">dasm_encode</a></code> will later turn into machine code.</p>
+        <p>Calls to this function should not be written by humans; they should only be written by the
+           <a href="#dynasm.lua">dynasm.lua</a> preprocessor. That said, the <code>start</code> parameter
+           gives an offset into the action list passed to <code><a href="#dasm_setup">dasm_setup</a></code>,
+           and the variadic parameter is used to pass concrete values for encoding-time constants in the
+           original assembly code.</p>
+        <p>If <code><a href="#DASM_CHECKS">DASM_CHECKS</a></code> is defined, this function performs additional
+           sanity checking. If any of these checks fail, subsequent calls to <code><a href="#dasm_checkstep">dasm_checkstep</a></code>
+           and <code><a href="#dasm_link">dasm_link</a></code> will return a non-zero value.</p>
+        <hr>
+        <h3 id="dasm_setup">dasm_setup</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> void dasm_setup(<a href="#Dst_DECL">Dst_DECL</a>, const void *actionlist);</pre>
+        <p>This function must be called after <code><a href="#dasm_setupglobal">dasm_setupglobal</a></code> to complete the
+           initialisation of a DynASM state.</p>
+        <p>The array defined by <code><a href="#.actionlist">.actionlist</a></code> must be passed as the <code>actionlist</code>
+           parameter, and will be used by subsequent calls to <code><a href="#dasm_put">dasm_put</a></code>.</p>
+        <hr>
+        <h3 id="dasm_setupglobal">dasm_setupglobal</h3>
+        <pre><a href="#DASM_FDEF">DASM_FDEF</a> void dasm_setupglobal(<a href="#Dst_DECL">Dst_DECL</a>, void **gl, unsigned int maxgl);</pre>
+        <p>This function must be called after <code><a href="#dasm_init">dasm_init</a></code>, and before
+           <code><a href="#dasm_setup">dasm_setup</a></code>, to perform the second stage of initialisation of a DynASM state.</p>
+        <p>The <code><em>ident</em>_MAX</code> value defined by <code><a href="#.globals">.globals <em>ident</em></a></code> should be passed as
+           <code>maxgl</code>, and a <code>void*</code> array of <code>maxgl</code> elements should be passed as <code>gl</code>.
+           It is common to use a local variable as said array, for example:</p>
+        <pre>void* globals[<em>ident</em>_MAX];
+dasm_setupglobal(&amp;d, globals, <em>ident</em>_MAX);</pre>
+        <p>The array is used as scratch space up until <code><a href="#dasm_encode">dasm_encode</a></code> is called, and then afterwards
+           the elements of the array give the addresses of <code>-></code> labels. Continuing the prior example, the address of
+           the global label <code>->bar:</code> would be given by <code>globals[<em>ident</em>_bar]</code>.</p>
+        <hr>
+        <h2 id="directives">Directives</h2>
+        <p>A wide selection of directives can be used in DynASM source files, though they fall into a small number of categories:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Category</th><th>Directives</th></tr></thead>
+        <tbody>
+          <tr><td>Features</td><td>
+            <code><a href="#.arch">.arch</a></code>,
+            <code><a href="#.capture">.capture</a></code>,
+            <code><a href="#.dumpcapture">.dumpcapture</a></code>,
+            <code><a href="#.macro">.macro</a></code>,
+            <code><a href="#.nop">.nop</a></code>,
+            <code><a href="#.section">.section</a></code>,
+            <code><a href="#.type">.type</a></code>
+          </td></tr>
+          <tr><td>Reflection</td><td>
+            <code><a href="#.actionlist">.actionlist</a></code>,
+            <code><a href="#.externnames">.externnames</a></code>,
+            <code><a href="#.globalnames">.globalnames</a></code>,
+            <code><a href="#.globals">.globals</a></code>
+          </td></tr>
+          <tr><td>Data</td><td>
+            <code><a href="#.align">.align</a></code>,
+            <code><a href="#.byte">.byte</a></code>,
+            <code><a href="#.dword">.dword</a></code>,
+            <code><a href="#.sbyte">.sbyte</a></code>,
+            <code><a href="#.space">.space</a></code>,
+            <code><a href="#.word">.word</a></code>
+          </td></tr>
+          <tr><td>Prepreprocessor</td><td>
+            <code><a href="#.define">.define</a></code>,
+            <code><a href="#.elif">.elif</a></code>,
+            <code><a href="#.else">.else</a></code>,
+            <code><a href="#.endif">.endif</a></code>,
+            <code><a href="#.error">.error</a></code>,
+            <code><a href="#.fatal">.fatal</a></code>,
+            <code><a href="#.if">.if</a></code>,
+            <code><a href="#.elif">.include</a></code>
+          </td></tr>
+        </tbody>
+        </table>
+        <p>As with instructions, arguments to directives are comma-separated, subject to balanced parentheses
+           (<code>()</code>, <code>[]</code>, and <code>{}</code>). For example, <code>.byte x,y,z,w</code>
+           has four arguments, while <code>.byte x(y,z), w</code> has two.</p>
+        <hr>
+        <h3 id=".actionlist">.actionlist</h3>
+        <pre>| .actionlist <em>ident</em></pre>
+        <p>This directive causes the <a href="#dynasm.lua">dynasm.lua</a> preprocessor to emit a piece of C code similar to:</p>
+        <pre>static const unsigned char <em>ident</em>[] = {
+  /* ... */
+};</pre>
+        <p>This directive must be used exactly once in a DynASM source file, and the array it defines must be
+           passed to <code><a href="#dasm_setup">dasm_setup</a></code>. The contents of the array reflects the
+           assembly used in the DynASM source file, though in an unspecified format.</p>
+        <hr>
+        <h3 id=".align">.align</h3>
+        <pre>| .align (2|4|8|16|32|64|128|256|word|dword|aword|qword|oword)</pre>
+        <p>This directive causes zero or more bytes containing <code>0x90</code> to be emitted by
+           <code><a href="#dasm_encode">dasm_encode</a></code>, such that the offset of the next byte, relative to
+           the start of the buffer passed to <code><a href="#dasm_encode">dasm_encode</a></code>, is a multiple
+           of the argument. Said argument must be a power of two between 2 and 256, or one of the following
+           type size aliases:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Alias</th><th>Acts like</th></tr></thead>
+        <tbody>
+          <tr><td><code>.align word</td><td><code>.align 2</code></td></tr>
+          <tr><td><code>.align dword</td><td><code>.align 4</code></td></tr>
+          <tr><td><code>.align aword</td><td><code>.align 4</code> <span class="badge">x86</span> or <code>.align 8</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>.align qword</td><td><code>.align 8</code></td></tr>
+          <tr><td><code>.align oword</td><td><code>.align 16</code></td></tr>
+        </tbody>
+        </table>
+        <hr>
+        <h3 id=".arch">.arch</h3>
+        <pre>| .arch (arm|mips|ppc|x64|x86)</pre>
+        <p>This directive specifies the architecture of the assembly code in a DynASM source file. It must be
+           used exactly once in a DynASM source file, and must be the first directive in a DynASM source file.
+           Note that this documentation only covers <code>.arch x86</code> and <code>.arch x64</code>, though other
+           architectures have similar macros and directives. Where the two documented architectures differ,
+           this page marks architecture-specific behaviour with <span class="badge">x86</span> or
+           <span class="badge">x64</span>.</p>
+        <hr>
+        <h3 id=".byte">.byte</h3>
+        <pre>| .byte <span class="arg-imm8">imm8</span> [, <span class="arg-imm8">imm8</span> [, ...]]</pre>
+        <p>This data directive emits one or more unsigned 8-bit values.</p>
+        <hr>
+        <h3 id=".capture">.capture</h3>
+        <pre>| .capture <em>name</em>
+/* ... */
+| .endcapture</pre>
+        <p>This directive affects everything up until the next <code>.endcapture</code>, and causes everything
+           that would be written to the output file to instead be appended to an internal buffer. The buffer
+           is identified by <em>name</em>, and multiple <code>.capture</code> directives with the same
+           <em>name</em> will append to the same buffer. The internal buffer must, at some later point in
+           time, be written to the output file by means of <code><a href="#.dumpcapture">.dumpcapture <em>name</em></a></code>.</p>
+        <hr>
+        <h3 id=".define">.define</h3>
+        <pre>| .define <em>name</em> [, <em>substitution</em>]</pre>
+        <p>This directive defines a prepreprocessor substitution. For the remainder of the DynASM source file,
+           on lines that start with a vertical bar, <code><em>name</em></code> is treated as if it were
+           <code><em>substitution</em></code> (or <code>1</code> if a substitution is not given).</p>
+        <hr>
+        <h3 id=".dumpcapture">.dumpcapture</h3>
+        <pre>| .dumpcapture <em>name</em></pre>
+        <p>This directive causes all output captured by prior <code><a href="#.capture">.capture <em>name</em></a></code>
+           directives to be written to the output file.</p>
+        <hr>
+        <h3 id=".dword">.dword</h3>
+        <pre>| .dword <span class="arg-imm32">imm32</span> [, <span class="arg-imm32">imm32</span> [, ...]]</pre>
+        <p>This data directive emits one or more unsigned 32-bit values.</p>
+        <hr>
+        <h3 id=".elif">.elif</h3>
+        <pre>| .elif <span class="arg-condition">condition</span></pre>
+        <p>This prepreprocessor directive is to <code>#elif</code> what <code><a href="#.if">.if</a></code> is to <code>#if</code>.
+        <hr>
+        <h3 id=".else">.else</h3>
+        <pre>| .else</pre>
+        <p>This prepreprocessor directive is to <code>#else</code> what <code><a href="#.if">.if</a></code> is to <code>#if</code>.
+        <hr>
+        <h3 id=".endif">.endif</h3>
+        <pre>| .endif</pre>
+        <p>This prepreprocessor directive is to <code>#endif</code> what <code><a href="#.if">.if</a></code> is to <code>#if</code>.
+        <hr>
+        <h3 id=".error">.error</h3>
+        <pre>| .error <em>message</em></pre>
+        <p>This prepreprocessor directive causes <a href="#dynasm.lua">dynasm.lua</a> to print <em>message</em>, continue processing
+           the remainder of the DynASM source file, and then exit with a failure code.</p>
+        <hr>
+        <h3 id=".externnames">.externnames</h3>
+        <pre>| .externnames <em>ident</em></pre>
+        <p>This directive causes the <a href="#dynasm.lua">dynasm.lua</a> preprocessor to emit a piece of C code similar to:</p>
+        <pre>static const char *const <em>ident</em>[] = {
+  /* ... */
+  (const char *)0
+};</pre>
+        <p>The array defined by this directive contains the name of every extern address used in the DynASM source file. For example,
+           if a DynASM source file refers to (just) the extern addresses <code>extern foo</code> and <code>extern bar</code>, then
+           this directive would cause the following to be emitted:</p>
+        <pre>static const char *const <em>ident</em>[] = {
+  "foo",
+  "bar",
+  (const char *)0
+};</pre>
+        <p>Subsequently, when <code>extern foo</code> is encoded, <code><a href="#DASM_EXTERN">DASM_EXTERN</a></code> would be
+           invoked with index <code>0</code>, and then when <code>extern bar</code> is encoded, it would be invoked with index <code>1</code>.
+        <hr>
+        <h3 id=".fatal">.fatal</h3>
+        <pre>| .fatal <em>message</em></pre>
+        <p>This prepreprocessor directive causes <a href="#dynasm.lua">dynasm.lua</a> to print <em>message</em>, and then immediately
+           exit with a failure code.</p>
+        <hr>
+        <h3 id=".globalnames">.globalnames</h3>
+        <pre>| .globalnames <em>ident</em></pre>
+        <p>This directive causes the <a href="#dynasm.lua">dynasm.lua</a> preprocessor to emit a piece of C code similar to:</p>
+        <pre>static const char *const <em>ident</em>[] = {
+  /* ... */
+  (const char *)0
+};</pre>
+        <p>The array defined by this directive contains the name of every <code>-&gt;</code> label used in the DynASM source file. For example,
+           if a DynASM source file refers to (just) the global labels <code>-&gt;foo</code> and <code>-&gt;bar</code>, then
+           this directive would cause the following to be emitted:</p>
+        <pre>static const char *const <em>ident</em>[] = {
+  "foo",
+  "bar",
+  (const char *)0
+};</pre>
+        <hr>
+        <h3 id=".globals">.globals</h3>
+        <pre>| .globals <em>prefix</em></pre>
+        <p>This directive causes the <a href="#dynasm.lua">dynasm.lua</a> preprocessor to emit a piece of C code similar to:</p>
+        <pre>enum {
+  /* ... */
+  <em>prefix</em>_MAX
+};</pre>
+        <p>The enum defined by this directive implicitly maps every <code>-&gt;</code> label used in the DynASM source file to an
+           integer. For example, if a DynASM source file refers to (just) the global labels <code>-&gt;foo</code> and
+           <code>-&gt;bar</code>, then this directive would cause the following to be emitted:</p>
+        <pre>enum {
+  <em>prefix</em>foo,
+  <em>prefix</em>bar,
+  <em>prefix</em>_MAX
+};</pre>
+        <p>This directive must be used exactly once in a DynASM source file, and the <code><em>prefix</em>_MAX</code> value it
+           defines must be passed as the third argument to <code><a href="#dasm_setupglobal">dasm_setupglobal</a></code>.
+           The other values it defines can be used to obtain the address of the respective label by indexing the array passed as
+           the second argument to <code><a href="#dasm_setupglobal">dasm_setupglobal</a></code> after <code><a href="#dasm_encode">dasm_encode</a></code>
+           has been called.</p>
+        <hr>
+        <h3 id=".if">.if</h3>
+        <pre>| .if <span class="arg-condition">condition</span></pre>
+        <p>If the given condition evaluates to <code>0</code>, <code>false</code>, or <code>nil</code>, then all lines from
+           the DynASM source file up until the next <code><a href="#.elif">.elif</a></code>, <code><a href="#.else">.else</a></code>,
+           or <code><a href="#.endif">.endif</a></code> directive are discarded. If the given condition evaluates to any other
+           value, said lines are kept.</p>
+        <p>The condition can be any Lua expression (and therefore use arithmetic, <code>not</code>, <code>and</code>, <code>or</code>,
+           etc.), and can make reference to names defined with <code><a href="#.define">.define</a></code>, though it is evaluated
+           in an otherwise empty sandbox.</p>
+        <hr>
+        <h3 id=".include">.include</h3>
+        <pre>| .include <em>filename</em></pre>
+        <p>This prepreprocessor directive causes the contents of the named file (which should itself be a DynASM source file)
+           to be treated as if it appeared in place of the <code>.include</code> directive. If <em>filename</em> is a relative
+           path, the current working directory will be searched for the file, followed by any include paths specified using
+           the <code>-I</code> flag to <a href="#dynasm.lua">dynasm.lua</a>.</p>
+        <hr>
+        <h3 id=".macro">.macro</h3>
+        <pre>| .macro <em>name</em> [, <em>param1</em> [, <em>param2</em> [, ...]]]
+| /* ... */
+| .endmacro</pre>
+        <p>This directive causes <em>name</em> to be recognised as a macro for the remainder of the DynASM source file. Macros
+           are invoked as if they were normal assembly instructions, using the syntax <code><em>name</em> arg1, arg2, ...</code>.</p>
+        <p>The body of the macro can contain assembly instructions and DynASM directives on lines starting with one vertical bar,
+           and it can contain C/C++ code on lines starting with two vertical bars. Any such lines can contain parameter names,
+           which will be substituted for the provided arguments, and they can also contain <code>..</code>, which acts as a token
+           pasting operator.</p>
+        <p>Note that lines which do not start with a vertical bar are untouched by <a href="#dynasm.lua">dynasm.lua</a>, and this
+           remains true between <code>.macro</code> and <code>.endmacro</code>. As such, C/C++ code that is meant to be emitted
+           when the macro is invoked needs to be prefixed with two vertical bars rather than no vertical bars.</p>
+        <hr>
+        <h3 id=".nop">.nop</h3>
+        <pre>| .nop ...</pre>
+        <p>This directive does nothing.</p>
+        <p>Note the difference between the directive <code>.nop</code>, which does nothing, and the instruction <code>nop</code>,
+           which is equivalent to <code>.byte 0x90</code>.</p>
+        <hr>
+        <h3 id=".sbyte">.sbyte</h3>
+        <pre>| .sbyte <span class="arg-imm8">imm8</span> [, <span class="arg-imm8">imm8</span> [, ...]]</pre>
+        <p>This data directive emits one or more signed 8-bit values.</p>
+        <hr>
+        <h3 id=".section">.section</h3>
+        <pre>| .section <em>name1</em> [, <em>name2</em> [, ...]]</pre>
+        <p>This directive allows a DynASM source file to write multiple code segments rather than just a single code segment.
+           Every argument <code><em>name</em></code> results in the introduction of a new directive <code>.<em>name</em></code>,
+           and using one of these introduced directives causes all subsequent assembly and data directives to append to the named
+           section. When <code><a href="#dasm_encode">dasm_encode</a></code> is called, the sections are concatenated to form a
+           single contiguous block of machine code.</p>
+        <p>This directive causes the <a href="#dynasm.lua">dynasm.lua</a> preprocessor to emit a piece of C code similar to:</p>
+        <pre>#define DASM_SECTION_NAME1 0
+#define DASM_SECTION_NAME2 1
+/* ... */
+#define DASM_MAXSECTION 2</pre>
+        <p>This directive can be used at most once per DynASM source file, and if it is used, the <code>DASM_MAXSECTION</code>
+           macro that it defines should be passed to <code><a href="#dasm_init">dasm_init</a></code>. The other macros that it
+           defines can be used with <code><a href="#dasm_checkstep">dasm_checkstep</a></code>.</p>
+        <hr>
+        <h3 id=".space">.space</h3>
+        <pre>| .space <span class="arg-imm32">imm32</span> [, <em>filler</em>]</pre>
+        <p>This data directive emits <em>imm32</em> copies of the byte <em>filler</em>. If specified, <em>filler</em> must be
+           an integer between 0 and 255, and defaults to zero if not specified.</p>
+        <hr>
+        <h3 id=".type">.type</h3>
+        <pre>| .type <em>name</em>, <em>ctype</em> [, <em>default_reg</em>]</pre>
+        <p>This directive makes it easier to manipulate registers of type <code><em>ctype</em>*</code> by defining the
+           following syntactic sugar for the remainder of the DynASM source file:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Sugar</th><th>Expansion</th></tr></thead>
+        <tbody>
+        <tr><td><code>#<em>name</em></code></td><td><code>sizeof(<em>ctype</em>)</code></td></tr>
+        <tr><td><code><em>name</em>:<em>reg</em>-&gt;<em>field</em></code></td><td><code>[<em>reg</em> + offsetof(<em>ctype</em>,<em>field</em>)]</code></td></tr>
+        <tr><td><code><em>name</em>:<em>reg</em>[<em>imm32</em>]</code></td><td><code>[<em>reg</em> + sizeof(<em>ctype</em>)*<em>imm32</em>]</code></td></tr>
+        <tr><td><code><em>name</em>:<em>reg</em>[<em>imm32</em>].<em>field</em></code></td><td><code>[<em>reg</em> + sizeof(<em>ctype</em>)*<em>imm32</em> + offsetof(<em>ctype</em>,<em>field</em>)]</code></td></tr>
+        <tr><td><code><em>name</em>:<em>reg</em></code><code>...</code></td><td><code>[<em>reg</em> + (int)(ptrdiff_t)&amp;(((<em>ctype</em>*)0)</code><code>...</code><code>)]</code></td></tr>
+        </tbody>
+        </table>
+        <p>Note that the middle three forms of sugar are just special cases of the last form of sugar, and therefore there is no ambiguity between
+           the last form and the earlier forms.</code>
+        <p>If <code><em>default_reg</em></code> is specified, <code>:<em>reg</em></code> can be omitted from the sugar, and the expansion will use <code><em>default_reg</em></code>.</p>
+        <hr>
+        <h3 id=".word">.word</h3>
+        <pre>| .word <span class="arg-imm16">imm16</span> [, <span class="arg-imm16">imm16</span> [, ...]]</pre>
+        <p>This data directive emits one or more unsigned 16-bit values.</p>

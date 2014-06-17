@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Unofficial DynASM Documentation</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/dynasm-doc.css" rel="stylesheet">
+  </head>
+  <body data-spy="scroll" data-target=".sidenav">
+    <div class="navbar navbar-default" role="navigation">
+      <div class="container">
+        <div class="navbar-header" id="top">
+          <a class="navbar-brand" href="index.html">The Unofficial DynASM Documentation</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="tutorial.html">Tutorial</a></li>
+            <li><a href="reference.html">Reference</a></li>
+            <li class="active"><a href="instructions.html">Instruction Listing</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+    <div class="row">
+      <div class="col-md-9">
+            <h2 id="operands">Operands</h2>
+        <p>Every instruction accepts zero or more operands, which are comma-separated, subject to balanced parentheses
+           (<code>()</code>, <code>[]</code>, and <code>{}</code>). For example, <code>not eax</code> has one operand,
+           while both of <code>mov eax, ebx</code> and <code>mov [eax+offsetof(foo,x)], arr[y,z]</code> have two operands.
+           Every operand will either be an immediate value, a named register, a jump target, or a memory reference.</p>
+        <hr>
+        <h3 id="immediates">Immediates</h3>
+        <p>The simplest immediate operands are decimal and hexadecimal integers, for example <code>ret 32</code> and
+           <code>ret 0x20</code>.</p>
+        <p>Any C/C++ expression can be used where an immediate operand is expected, for example <code>ret num_args*4</code>.
+           The expression will be evaluated when <code><a href="reference.html#dasm_put">dasm_put</a></code> is called, and
+           the resulting value will become a constant in the generated machine code. Such expressions are sometimes referred
+           to as encoding-time constants, and are a a superset of compile-time constants.</p>
+        <p>Where an immediate can be used, it'll be listed as <code class="nolink">immNN</code>, where <code>NN</code> is the maximum
+           bit width of the immediate. In cases where instructions have different forms for different bit-widths of immediate
+           or particular immediate values, DynASM will automatically choose the most compact form possible on a value by
+           value basis.</p>
+        <p>Note that the special <span class="badge">x64</span> instruction <code><a href="#mov64_2">mov64</a></code> is the
+           only instruction with a 64-bit immediate operand.</p>
+        <hr>
+        <h3 id="registers">Registers</h3>
+        <p>The following integer registers can be used, using either a uniform numeric scheme or traditional names:</p>
+        <table class="table table-striped">
+        <thead><tr><th>64-bit</th><th>32-bit </th><th>16-bit </th><th>8-bit High</th><th>8-bit Low</th></tr></thead>
+        <tbody>
+          <tr><td><code>rax</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x64</span></td><td><code>eax</code> / <code>r0d</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x86</span></td><td><code>ax</code> / <code>r0w</code></td><td><code>ah</code></td><td><code>al</code> / <code>r0b</code></td></tr>
+          <tr><td><code>rcx</code> <span class="badge">x64</span> / <code>r1</code> <span class="badge">x64</span></td><td><code>ecx</code> / <code>r1d</code> <span class="badge">x64</span> / <code>r1</code> <span class="badge">x86</span></td><td><code>cx</code> / <code>r1w</code></td><td><code>ch</code></td><td><code>cl</code> / <code>r1b</code></td></tr>
+          <tr><td><code>rdx</code> <span class="badge">x64</span> / <code>r2</code> <span class="badge">x64</span></td><td><code>edx</code> / <code>r2d</code> <span class="badge">x64</span> / <code>r2</code> <span class="badge">x86</span></td><td><code>dx</code> / <code>r2w</code></td><td><code>dh</code></td><td><code>dl</code> / <code>r2b</code></td></tr>
+          <tr><td><code>rbx</code> <span class="badge">x64</span> / <code>r3</code> <span class="badge">x64</span></td><td><code>ebx</code> / <code>r3d</code> <span class="badge">x64</span> / <code>r3</code> <span class="badge">x86</span></td><td><code>bx</code> / <code>r3w</code></td><td><code>bh</code></td><td><code>bl</code> / <code>r3b</code></td></tr>
+          <tr><td><code>rsp</code> <span class="badge">x64</span> / <code>r4</code> <span class="badge">x64</span></td><td><code>esp</code> / <code>r4d</code> <span class="badge">x64</span> / <code>r4</code> <span class="badge">x86</span></td><td><code>sp</code> / <code>r4w</code></td><td></td><td><code>r4b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>rbp</code> <span class="badge">x64</span> / <code>r5</code> <span class="badge">x64</span></td><td><code>ebp</code> / <code>r5d</code> <span class="badge">x64</span> / <code>r5</code> <span class="badge">x86</span></td><td><code>bp</code> / <code>r5w</code></td><td></td><td><code>r5b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>rsi</code> <span class="badge">x64</span> / <code>r6</code> <span class="badge">x64</span></td><td><code>esi</code> / <code>r6d</code> <span class="badge">x64</span> / <code>r6</code> <span class="badge">x86</span></td><td><code>si</code> / <code>r6w</code></td><td></td><td><code>r6b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>rdi</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x64</span></td><td><code>edi</code> / <code>r7d</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x86</span></td><td><code>di</code> / <code>r7w</code></td><td></td><td><code>r7b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r8</code> <span class="badge">x64</span></td><td><code>r8d</code> <span class="badge">x64</span></td><td><code>r8w</code> <span class="badge">x64</span></td><td></td><td><code>r8b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r9</code> <span class="badge">x64</span></td><td><code>r9d</code> <span class="badge">x64</span></td><td><code>r9w</code> <span class="badge">x64</span></td><td></td><td><code>r9b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r10</code> <span class="badge">x64</span></td><td><code>r10d</code> <span class="badge">x64</span></td><td><code>r10w</code> <span class="badge">x64</span></td><td></td><td><code>r10b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r11</code> <span class="badge">x64</span></td><td><code>r11d</code> <span class="badge">x64</span></td><td><code>r11w</code> <span class="badge">x64</span></td><td></td><td><code>r11b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r12</code> <span class="badge">x64</span></td><td><code>r12d</code> <span class="badge">x64</span></td><td><code>r12w</code> <span class="badge">x64</span></td><td></td><td><code>r12b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r13</code> <span class="badge">x64</span></td><td><code>r13d</code> <span class="badge">x64</span></td><td><code>r13w</code> <span class="badge">x64</span></td><td></td><td><code>r13b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r14</code> <span class="badge">x64</span></td><td><code>r14d</code> <span class="badge">x64</span></td><td><code>r14w</code> <span class="badge">x64</span></td><td></td><td><code>r14b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r15</code> <span class="badge">x64</span></td><td><code>r15d</code> <span class="badge">x64</span></td><td><code>r15w</code> <span class="badge">x64</span></td><td></td><td><code>r15b</code> <span class="badge">x64</span></td></tr>
+        </tbody>
+        </table>
+        <p>The x87 registers can be used by their names <code>st0</code> through <code>st7</code>.</p>
+        <p>The SSE registers can be used by their names <code>xmm0</code> through <code>xmm7</code> <span class="badge">x86</span>
+           or <code>xmm15</code> <span class="badge">x64</span>.</p>
+        <p>In addition to the static names, the first eight registers from each family can be named dynamically:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Format</th><th>Indexable Registers</th></tr></thead>
+        <tbody>
+          <tr><td><code>Rq(<a href="#immediates">imm3</a>)</code> <span class="badge">x64</span></td><td><code>r0</code> / <code>rax</code> through <code>r7</code> / <code>rdi</code></td></tr>
+          <tr><td><code>Ra(<a href="#immediates">imm3</a>)</code></td><td><code>r0</code> / <code>eax</code> <span class="badge">x86</span> / <code>rax</code> <span class="badge">x64</span> through <code>r7</code> / <code>edi</code> <span class="badge">x86</span> / <code>rdi</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>Rd(<a href="#immediates">imm3</a>)</code></td><td><code>r0d</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x86</span> / <code>eax</code> through <code>r7d</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x86</span> / <code>edi</code></td></tr>
+          <tr><td><code>Rw(<a href="#immediates">imm3</a>)</code></td><td><code>r0w</code> / <code>ax</code> through <code>r7w</code> / <code>di</code></td></tr>
+          <tr><td><code>Rb(<a href="#immediates">imm3</a>)</code> <span class="badge">x86</span></td><td><code>r0b</code> / <code>al</code> through <code>r3b</code> / <code>bl</code>, then <code>ah</code>, <code>ch</code>, <code>dh</code>, <code>bh</code></td></tr>
+          <tr><td><code>Rb(<a href="#immediates">imm2</a>)</code> <span class="badge">x64</span></td><td><code>r0b</code> / <code>al</code> through <code>r3b</code> / <code>bl</code></td></tr>
+          <tr><td><code>Rf(<a href="#immediates">imm3</a>)</code></td><td><code>st0</code> through <code>st7</code></td></tr>
+          <tr><td><code>xmm(<a href="#immediates">imm3</a>)</code></td><td><code>xmm0</code> through <code>xmm7</code></td></tr>
+        </tbody>
+        </table>
+        <p>Where an integer register can be used, it'll be listed as <code>reg</code> or <code>rNN</code>, where <code>NN</code> is the bit width
+           of the register. Where an x87 or SSE register can it used, it'll be listed as <code>stx</code> or <code>xmm</code>
+           respectively. Where a specific register has to be used, it'll be listed as the traditional register name.</p>
+        <hr>
+        <h3 id="jump-targets">Jump Targets</h3>
+        <p>Most instructions that affect the instruction pointer have a so-called jump target operand (for the sake
+           of simplicitly, <code>call</code> instructions use the jump-target terminology), of which there are six
+           forms:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Format</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>&lt;1</code> through <code>&lt;9</code></td><td>Jump backwards to local label <code>1:</code> through <code>9:</code>.</td></tr>
+          <tr><td><code>&gt;1</code> through <code>&gt;9</code></td><td>Jump forwards to local label <code>1:</code> through <code>9:</code>.</td></tr>
+          <tr><td><code>-&gt;<em>name</em></code></td><td>Jump to the global label <code>-&gt;<em>name</em>:</code>.</td></tr>
+          <tr><td><code>=&gt;<a href="#immediates">imm32</a></code></td><td>Jump to the dynamic label <code>=&gt;<a href="#immediates">imm32</a>:</code>.</td></tr>
+          <tr><td><code>&amp;<em>expr</em></code> <span class="badge">x86</span></td><td>Jump to <code>(ptrdiff_t)(<em>expr</em>)</code>, as computed when <code><a href="reference.html#dasm_put">dasm_put</a></code> is called.</td></tr>
+          <tr><td><code>extern ...</code></td><td>Jump to a location determined by <code><a href="reference.html#DASM_EXTERN">DASM_EXTERN</a></code> during <code><a href="reference.html#dasm_encode">dasm_encode</a></code>.</td></tr>
+        </tbody>
+        </table>
+        <p>In the context of local labels, <em>forwards</em> and <em>backwards</em> refer to the generated instruction
+           stream rather than any lexical property of the DynASM source file, meaning that the following two examples
+           are equivalent:</p>
+        <table style="width:100%"><tr><td><pre style="margin-right:.5em">
+
+
+
+void a(Dst_DECL) {
+  | jmp >1
+  |1:
+}</pre></td><td><pre style="margin-left:.5em">static void b(Dst_DECL) {
+  |1:
+}
+void a(Dst_DECL) {
+  | jmp >1
+  b(Dst);
+}</pre></td></tr></table>
+        <p>Where a jump target can be used, it'll be listed as <code>lbl</code>.</p>
+        <hr>
+        <h3 id="memory">Memory</h3>
+        <p>There are a wide variety of possible forms for operands that refer to locations in memory:</p>
+        <table class="table table-striped">
+        <thead><tr><th>32-bit form <span class="badge">x86</span></th><th>64-bit form <span class="badge">x64</span></th></tr></thead>
+        <tbody>
+          <tr><td><code>[<a href="#registers">r32</a>]</code></td><td><code>[<a href="#registers">r64</a>]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>(+|-)<a href="#immediates">imm32</a>]</code></td><td><code>[<a href="#registers">r64</a>(+|-)<a href="#immediates">imm32</a>]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>+<a href="#registers">r32</a>]</code></td><td><code>[<a href="#registers">r64</a>+<a href="#registers">r64</a>]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>+<a href="#registers">r32</a>(+|-)<a href="#immediates">imm32</a>]</code></td><td><code>[<a href="#registers">r64</a>+<a href="#registers">r64</a>(+|-)<a href="#immediates">imm32</a>]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>*(1|2|4|8)]</code></td><td><code>[<a href="#registers">r64</a>*(1|2|4|8)]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>*(1|2|4|8)(+|-)<a href="#immediates">imm32</a>]</code></td><td><code>[<a href="#registers">r64</a>*(1|2|4|8)(+|-)<a href="#immediates">imm32</a>]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>+<a href="#registers">r32</a>*(1|2|4|8)]</code></td><td><code>[<a href="#registers">r64</a>+<a href="#registers">r64</a>*(1|2|4|8)]</code></td></tr>
+          <tr><td><code>[<a href="#registers">r32</a>+<a href="#registers">r32</a>*(1|2|4|8)(+|-)<a href="#immediates">imm32</a>]</code></td><td><code>[<a href="#registers">r64</a>+<a href="#registers">r64</a>*(1|2|4|8)(+|-)<a href="#immediates">imm32</a>]</code></td></tr>
+          <tr><td><code>[<a href="#immediates">imm32</a>]</code></td><td><code>[<a href="#immediates">imm32</a>]</code> (limited to low 2GB of address space)</td></tr>
+          <tr><td><code>[<a href="#jump-targets">lbl</a>]</code> (encoded as an absolute address)</td><td><code>[<a href="#jump-targets">lbl</a>]</code> (encoded as rip-relative with 32-bit displacement)</td></tr>
+        </tbody>
+        </table>
+        <p>Note that the DynASM parser is sensitive to order. For example, <code>[<a href="#registers">r0</a>+<a href="#registers">r1</a>*2]</code> is a recognised
+           memory operand, but <code>[2*<a href="#registers">r1</a>+<a href="#registers">r0</a>]</code> is not, despite it seeming identical. Also note that the parser
+           is sensitive to whitespace when dynamic registers are used in memory operands: there should be
+           no whitespace after the trailing <code>)</code> of the dynamic register and any <code>+</code> or <code>*</code>
+           character which follows.</p>
+        <p>Most of these forms are self-explanatory, with the possible exception of <code>[<a href="#jump-targets">lbl</a>]</code>. This form allows
+           any jump target to be used as a memory operand: the memory location it refers to is the location that would
+           be jumped to.</p>
+        <p>The <code><a href="reference.html#_type">.type</a></code> directive can be used to create syntactic
+           sugar for the <code>[<a href="#registers">r32</a>(+|-)<a href="#immediates">imm32</a>]</code> and <code>[<a href="#registers">r64</a>(+|-)<a href="#immediates">imm32</a>]</code> forms, therein making
+           it easier to work with C structures.</p>
+        <p>A memory operand can be preceded by one of the following size specifiers to control the number of bytes
+           accessed at the memory location:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Memory Size Prefix</th><th>Number of bytes accessed</th></tr></thead>
+        <tbody>
+          <tr><td><code>byte&nbsp;</code></td><td>1</td></tr>
+          <tr><td><code>word&nbsp;</code></td><td>2</td></tr>
+          <tr><td><code>dword&nbsp;</code></td><td>4</td></tr>
+          <tr><td><code>aword&nbsp;</code></td><td>4 <span class="badge">x86</span> or 8 <span class="badge">x64</span></td></tr>
+          <tr><td><code>qword&nbsp;</code></td><td>8</td></tr>
+          <tr><td><code>tword&nbsp;</code></td><td>10 (used for x87)</td></tr>
+          <tr><td><code>oword&nbsp;</code></td><td>16 (used for SSE)</td></tr>
+        </tbody>
+        </table>
+        <p>Some instructions will infer the memory size prefix based on the size of other operands.
+           Where an instruction requires a memory size prefix (for example because it cannot be inferred), the
+           applicable prefix or prefixes will be listed. Where a memory operand can be used, it'll be listed
+           as <code>mem</code> or <code>mNN</code>, where <code>NN</code> is the number of
+           <strong>bits</strong> accessed.
+        <hr>
+        <h3 id="memory64">Memory (<code>mov64</code>)</h3>
+        <p>The special <span class="badge">x64</span> instruction <code><a href="#mov64_2">mov64</a></code> accepts the
+           following memory forms <strong>instead of</strong> the usual forms:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Form</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>[&amp;<em>expr</em>]</code></td><td>Access <code>(ptrdiff_t)(<em>expr</em>)</code>, as computed when <code><a href="reference.html#dasm_put">dasm_put</a></code> is called.</td></tr>
+          <tr><td><code>[<a href="#immediates">imm64</a>]</code></td><td>Like <code>[<a href="#immediates">imm32</a>]</code>, except not limited to the low 2GB of address space.</td></tr>
+        </tbody>
+        </table>
+        <hr>
+        <h2 id="labels">Labels</h2>
+        <p>As well as instructions and directives, DynASM supports labels, which are locations in
+           the generated machine code that can be used as jump targets. Labels are defined by suffixing
+           the label name with a colon.</p>
+        <hr>
+        <h3 id="local">Local Labels</h3>
+        <table style="width:100%"><tr><td><pre style="margin-right:1em">|1:
+|2:
+|3:</pre></td><td><pre style="margin-left:.5em;margin-right:.5em">|4:
+|5:
+|6:</pre></td><td><pre style="margin-left:1em">|7:
+|8:
+|9:</pre></td></tr></table>
+        <p>There are nine local labels, <code>1:</code> through <code>9:</code>, and they can be
+           defined multiple times per DynASM source file. Local label <code>i</code> is used as
+           a jump target by means of the syntax <code>&lt;i</code> or <code>&gt;i</code>. The
+           former syntax takes the most recent definition of <code>i</code> as the jump target,
+           while the latter syntax takes the next definition of <code>i</code> as the jump target.</p>
+        <p>Note that <code>&gt;i</code> must at some point be followed by <code>i:</code>, <code>&lt;i</code>
+           must have been preceded by <code>i:</code>, and <code>i:</code> must appear at
+           least once between any <code>&gt;i</code> and <code>&lt;i</code>. Equivalently, this
+           last condition means that a <code>&gt;i</code> cannot jump over a <code>&lt;i</code>, and
+           vice versa.</p>
+        <hr>
+        <h3 id="global">Global Labels</h3>
+        <pre>|-&gt;<em>name</em>:</pre>
+        <p>Any valid C identifier can be used as a global label. There is no limit on the number of
+           global labels used in a DynASM source file, but each individual global label can only be
+           defined once.</p>
+        <p>The <code><a href="reference.html#_globals">.globals</a></code> directive is used to emit a C enum consisting of every global
+           label in a DynASM source file, and the output from this directive must be passed to
+           <code><a href="reference.html#dasm_setupglobal">dasm_setupglobal</a></code>. Additionally, the <code><a href="reference.html#_globalnames">.globalnames</a></code> directive can be used to emit
+           an array of C strings consisting of the names of all global labels.</p>
+        <p>After <code><a href="reference.html#dasm_link">dasm_link</a></code> has been called, the address of a global label can be retreived
+           by indexing into the array previously passed to <code><a href="reference.html#dasm_setupglobal">dasm_setupglobal</a></code> using one of the enum
+           members defined by <code><a href="reference.html#_globals">.globals</a></code>.</p>
+        <hr>
+        <h3 id="dynamic">Dynamic Labels</h3>
+        <pre>|=&gt;<a href="#immediates">imm32</a>:</pre>
+        <p>Dynamic labels are similar to global labels, except that their names are non-negative
+           integers rather than C identifiers. Initially there is a limit of zero dynamic labels,
+           but this limit can be raised at any time by calling <code><a href="reference.html#dasm_growpc">dasm_growpc</a></code>. As with
+           global labels, each individual dynamic label can only be defined once.</p>
+        <p>As with dynamically indexed registers and immediate operands, a dynamic label's name
+           is an encoding-time constant. This means that any C/C++ expression can be used, and the
+           expression will be evaluated when <code><a href="reference.html#dasm_put">dasm_put</a></code> is called.</p>
+        <p>After <code><a href="reference.html#dasm_link">dasm_link</a></code> has been called, the address of a dynamic label can be retreived
+           by calling <code><a href="reference.html#dasm_getpclabel">dasm_getpclabel</a></code>, and adding the resulting value to the pointer passed
+           to <code><a href="reference.html#dasm_encode">dasm_encode</a></code>.</p>
+        <hr>
+        <h2 id="instructions">Instructions</h3>
+        <p>The remainder of this document lists the instructions that can be used in DynASM
+           source files, and the operands they expect.</p><hr>
+<h3 id="A">A</h3>
+<pre id="a16_0">| a16 <span class="badge">x86</span></pre>
+<pre id="a32_0">| a32 <span class="badge">x64</span></pre>
+<pre id="adc_2">| adc <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| adc <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| adc <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| adc <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| adc (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="add_2">| add <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| add <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| add <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| add <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| add (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="addpd_2">| addpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| addpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="addps_2">| addps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| addps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="addsd_2">| addsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| addsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="addss_2">| addss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| addss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="addsubpd_2">| addsubpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| addsubpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="addsubps_2">| addsubps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| addsubps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="and_2">| and <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| and <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| and <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| and <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| and (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="andnpd_2">| andnpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| andnpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="andnps_2">| andnps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| andnps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="andpd_2">| andpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| andpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="andps_2">| andps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| andps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<hr>
+<h3 id="B">B</h3>
+<pre id="blendpd_3">| blendpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| blendpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="blendps_3">| blendps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| blendps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="blendvpd_3">| blendvpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm0</a>
+| blendvpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#registers">xmm0</a></pre>
+<pre id="blendvps_3">| blendvps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm0</a>
+| blendvps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#registers">xmm0</a></pre>
+<pre id="bsf_2">| bsf <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| bsf <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="bsr_2">| bsr <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| bsr <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="bswap_1">| bswap <a href="#registers">r64</a>
+| bswap <a href="#registers">r32</a></pre>
+<pre id="bt_2">| bt <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| bt <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| bt <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| bt (word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="btc_2">| btc <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| btc <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| btc <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| btc (word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="btr_2">| btr <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| btr <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| btr <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| btr (word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="bts_2">| bts <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| bts <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| bts <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| bts (word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<hr>
+<h3 id="C">C</h3>
+<pre id="call_1">| call <a href="#jump-targets">lbl</a>
+| call <a href="#registers">r32</a> <span class="badge">x86</span>
+| call dword <a href="#memory">m32</a> <span class="badge">x86</span>
+| call <a href="#registers">r64</a> <span class="badge">x64</span>
+| call qword <a href="#memory">m64</a> <span class="badge">x64</span></pre>
+<pre id="cbw_0">| cbw</pre>
+<pre id="cdq_0">| cdq</pre>
+<pre id="cdqe_0">| cdqe</pre>
+<pre id="clc_0">| clc</pre>
+<pre id="cld_0">| cld</pre>
+<pre id="clflush_1">| clflush <a href="#memory">mem</a></pre>
+<pre id="cmc_0">| cmc</pre>
+<pre id="cmova_2">| cmova <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmova <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovae_2">| cmovae <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovae <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovb_2">| cmovb <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovb <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovbe_2">| cmovbe <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovbe <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovc_2">| cmovc <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovc <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmove_2">| cmove <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmove <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovg_2">| cmovg <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovg <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovge_2">| cmovge <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovge <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovl_2">| cmovl <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovl <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovle_2">| cmovle <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovle <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovna_2">| cmovna <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovna <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnae_2">| cmovnae <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnae <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnb_2">| cmovnb <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnb <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnbe_2">| cmovnbe <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnbe <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnc_2">| cmovnc <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnc <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovne_2">| cmovne <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovne <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovng_2">| cmovng <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovng <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnge_2">| cmovnge <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnge <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnl_2">| cmovnl <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnl <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnle_2">| cmovnle <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnle <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovno_2">| cmovno <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovno <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnp_2">| cmovnp <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnp <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovns_2">| cmovns <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovns <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovnz_2">| cmovnz <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovnz <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovo_2">| cmovo <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovo <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovp_2">| cmovp <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovp <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovpe_2">| cmovpe <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovpe <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovpo_2">| cmovpo <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovpo <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovs_2">| cmovs <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovs <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmovz_2">| cmovz <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmovz <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="cmp_2">| cmp <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| cmp <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| cmp <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| cmp <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| cmp (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="cmppd_3">| cmppd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| cmppd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="cmpps_3">| cmpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| cmpps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="cmpsb_0">| cmpsb</pre>
+<pre id="cmpsd_0">| cmpsd</pre>
+<pre id="cmpsd_3">| cmpsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| cmpsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>, <a href="#immediates">imm8</a></pre>
+<pre id="cmpss_3">| cmpss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| cmpss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>, <a href="#immediates">imm8</a></pre>
+<pre id="cmpsw_0">| cmpsw</pre>
+<pre id="comisd_2">| comisd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| comisd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="comiss_2">| comiss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| comiss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="cpuid_0">| cpuid</pre>
+<pre id="cqo_0">| cqo</pre>
+<pre id="crc32_2">| crc32 <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| crc32 <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| crc32 <a href="#registers">r32</a>, word <a href="#memory">m16</a>
+| crc32 <a href="#registers">r32</a>, byte <a href="#memory">m8</a>
+| crc32 <a href="#registers">r64</a>, byte <a href="#memory">m8</a></pre>
+<pre id="cs_0">| cs</pre>
+<pre id="cvtdq2pd_2">| cvtdq2pd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtdq2pd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtdq2ps_2">| cvtdq2ps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtdq2ps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="cvtpd2dq_2">| cvtpd2dq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtpd2dq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="cvtpd2ps_2">| cvtpd2ps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtpd2ps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="cvtpi2pd_2">| cvtpi2pd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtpi2ps_2">| cvtpi2ps <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtps2dq_2">| cvtps2dq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtps2dq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="cvtps2pd_2">| cvtps2pd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtps2pd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtsd2si_2">| cvtsd2si <a href="#registers">r32</a>, <a href="#registers">xmm</a>
+| cvtsd2si <a href="#registers">r64</a>, <a href="#registers">xmm</a>
+| cvtsd2si <a href="#registers">r32</a>, qword <a href="#memory">m64</a>
+| cvtsd2si <a href="#registers">r64</a>, <a href="#memory">m64</a></pre>
+<pre id="cvtsd2ss_2">| cvtsd2ss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtsd2ss <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtsi2sd_2">| cvtsi2sd <a href="#registers">xmm</a>, <a href="#registers">r32</a>
+| cvtsi2sd <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>
+| cvtsi2sd <a href="#registers">xmm</a>, <a href="#registers">r64</a>
+| cvtsi2sd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtsi2ss_2">| cvtsi2ss <a href="#registers">xmm</a>, <a href="#registers">r32</a>
+| cvtsi2ss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>
+| cvtsi2ss <a href="#registers">xmm</a>, <a href="#registers">r64</a>
+| cvtsi2ss <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="cvtss2sd_2">| cvtss2sd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvtss2sd <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="cvtss2si_2">| cvtss2si <a href="#registers">r32</a>, <a href="#registers">xmm</a>
+| cvtss2si <a href="#registers">r64</a>, <a href="#registers">xmm</a>
+| cvtss2si <a href="#registers">r32</a>, <a href="#memory">m32</a>
+| cvtss2si <a href="#registers">r64</a>, dword <a href="#memory">m32</a></pre>
+<pre id="cvttpd2dq_2">| cvttpd2dq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvttpd2dq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="cvttps2dq_2">| cvttps2dq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| cvttps2dq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="cvttsd2si_2">| cvttsd2si <a href="#registers">r32</a>, <a href="#registers">xmm</a>
+| cvttsd2si <a href="#registers">r64</a>, <a href="#registers">xmm</a>
+| cvttsd2si <a href="#registers">r32</a>, qword <a href="#memory">m64</a>
+| cvttsd2si <a href="#registers">r64</a>, <a href="#memory">m64</a></pre>
+<pre id="cvttss2si_2">| cvttss2si <a href="#registers">r32</a>, <a href="#registers">xmm</a>
+| cvttss2si <a href="#registers">r64</a>, <a href="#registers">xmm</a>
+| cvttss2si <a href="#registers">r32</a>, <a href="#memory">m32</a>
+| cvttss2si <a href="#registers">r64</a>, dword <a href="#memory">m32</a></pre>
+<pre id="cwd_0">| cwd</pre>
+<pre id="cwde_0">| cwde</pre>
+<hr>
+<h3 id="D">D</h3>
+<pre id="dec_1">| dec <a href="#registers">reg</a>
+| dec (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="div_1">| div <a href="#registers">reg</a>
+| div (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="divpd_2">| divpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| divpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="divps_2">| divps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| divps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="divsd_2">| divsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| divsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="divss_2">| divss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| divss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="dppd_3">| dppd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| dppd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="dpps_3">| dpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| dpps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="ds_0">| ds</pre>
+<hr>
+<h3 id="E">E</h3>
+<pre id="es_0">| es</pre>
+<pre id="extractps_3">| extractps <a href="#registers">r32</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| extractps dword <a href="#memory">m32</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| extractps <a href="#registers">r64</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="extrq_2">| extrq <a href="#registers">xmm</a>, <a href="#registers">xmm</a></pre>
+<pre id="extrq_3">| extrq <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>, <a href="#immediates">imm8</a></pre>
+<hr>
+<h3 id="F">F</h3>
+<pre id="f2xm1_0">| f2xm1</pre>
+<pre id="fabs_0">| fabs</pre>
+<pre id="fadd_1">| fadd <a href="#registers">stx</a>
+| fadd dword <a href="#memory">m32</a>
+| fadd qword <a href="#memory">m64</a></pre>
+<pre id="fadd_2">| fadd <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fadd <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fadd <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fadd <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="faddp_1">| faddp <a href="#registers">stx</a></pre>
+<pre id="faddp_2">| faddp <a href="#registers">stx</a>, <a href="#registers">st0</a></pre>
+<pre id="fchs_0">| fchs</pre>
+<pre id="fclex_0">| fclex</pre>
+<pre id="fcmovb_1">| fcmovb <a href="#registers">stx</a></pre>
+<pre id="fcmovb_2">| fcmovb <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmovbe_1">| fcmovbe <a href="#registers">stx</a></pre>
+<pre id="fcmovbe_2">| fcmovbe <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmove_1">| fcmove <a href="#registers">stx</a></pre>
+<pre id="fcmove_2">| fcmove <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmovnb_1">| fcmovnb <a href="#registers">stx</a></pre>
+<pre id="fcmovnb_2">| fcmovnb <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmovnbe_1">| fcmovnbe <a href="#registers">stx</a></pre>
+<pre id="fcmovnbe_2">| fcmovnbe <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmovne_1">| fcmovne <a href="#registers">stx</a></pre>
+<pre id="fcmovne_2">| fcmovne <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmovnu_1">| fcmovnu <a href="#registers">stx</a></pre>
+<pre id="fcmovnu_2">| fcmovnu <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcmovu_1">| fcmovu <a href="#registers">stx</a></pre>
+<pre id="fcmovu_2">| fcmovu <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcom_1">| fcom <a href="#registers">stx</a>
+| fcom dword <a href="#memory">m32</a>
+| fcom qword <a href="#memory">m64</a></pre>
+<pre id="fcom_2">| fcom <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fcom <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fcom <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fcomi_1">| fcomi <a href="#registers">stx</a></pre>
+<pre id="fcomi_2">| fcomi <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcomip_1">| fcomip <a href="#registers">stx</a></pre>
+<pre id="fcomip_2">| fcomip <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fcomp_1">| fcomp <a href="#registers">stx</a>
+| fcomp dword <a href="#memory">m32</a>
+| fcomp qword <a href="#memory">m64</a></pre>
+<pre id="fcomp_2">| fcomp <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fcomp <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fcomp <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fcompp_0">| fcompp</pre>
+<pre id="fcos_0">| fcos</pre>
+<pre id="fdecstp_0">| fdecstp</pre>
+<pre id="fdiv_1">| fdiv <a href="#registers">stx</a>
+| fdiv dword <a href="#memory">m32</a>
+| fdiv qword <a href="#memory">m64</a></pre>
+<pre id="fdiv_2">| fdiv <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fdiv <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fdiv <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fdiv <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fdivp_1">| fdivp <a href="#registers">stx</a></pre>
+<pre id="fdivp_2">| fdivp <a href="#registers">stx</a>, <a href="#registers">st0</a></pre>
+<pre id="fdivr_1">| fdivr <a href="#registers">stx</a>
+| fdivr dword <a href="#memory">m32</a>
+| fdivr qword <a href="#memory">m64</a></pre>
+<pre id="fdivr_2">| fdivr <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fdivr <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fdivr <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fdivr <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fdivrp_1">| fdivrp <a href="#registers">stx</a></pre>
+<pre id="fdivrp_2">| fdivrp <a href="#registers">stx</a>, <a href="#registers">st0</a></pre>
+<pre id="fiadd_1">| fiadd dword <a href="#memory">m32</a>
+| fiadd word <a href="#memory">m16</a></pre>
+<pre id="ficom_1">| ficom dword <a href="#memory">m32</a>
+| ficom word <a href="#memory">m16</a></pre>
+<pre id="ficomp_1">| ficomp dword <a href="#memory">m32</a>
+| ficomp word <a href="#memory">m16</a></pre>
+<pre id="fidiv_1">| fidiv dword <a href="#memory">m32</a>
+| fidiv word <a href="#memory">m16</a></pre>
+<pre id="fidivr_1">| fidivr dword <a href="#memory">m32</a>
+| fidivr word <a href="#memory">m16</a></pre>
+<pre id="fild_1">| fild word <a href="#memory">m16</a>
+| fild dword <a href="#memory">m32</a>
+| fild qword <a href="#memory">m64</a></pre>
+<pre id="fimul_1">| fimul dword <a href="#memory">m32</a>
+| fimul word <a href="#memory">m16</a></pre>
+<pre id="fincstp_0">| fincstp</pre>
+<pre id="fist_1">| fist word <a href="#memory">m16</a>
+| fist dword <a href="#memory">m32</a></pre>
+<pre id="fistp_1">| fistp word <a href="#memory">m16</a>
+| fistp dword <a href="#memory">m32</a>
+| fistp qword <a href="#memory">m64</a></pre>
+<pre id="fisttp_1">| fisttp word <a href="#memory">m16</a>
+| fisttp dword <a href="#memory">m32</a>
+| fisttp qword <a href="#memory">m64</a></pre>
+<pre id="fisub_1">| fisub dword <a href="#memory">m32</a>
+| fisub word <a href="#memory">m16</a></pre>
+<pre id="fisubr_1">| fisubr dword <a href="#memory">m32</a>
+| fisubr word <a href="#memory">m16</a></pre>
+<pre id="fld1_0">| fld1</pre>
+<pre id="fld_1">| fld <a href="#registers">stx</a>
+| fld dword <a href="#memory">m32</a>
+| fld qword <a href="#memory">m64</a>
+| fld tword <a href="#memory">m80</a></pre>
+<pre id="fldcw_1">| fldcw word <a href="#memory">m16</a></pre>
+<pre id="fldl2e_0">| fldl2e</pre>
+<pre id="fldl2t_0">| fldl2t</pre>
+<pre id="fldlg2_0">| fldlg2</pre>
+<pre id="fldln2_0">| fldln2</pre>
+<pre id="fldpi_0">| fldpi</pre>
+<pre id="fldz_0">| fldz</pre>
+<pre id="fmul_1">| fmul <a href="#registers">stx</a>
+| fmul dword <a href="#memory">m32</a>
+| fmul qword <a href="#memory">m64</a></pre>
+<pre id="fmul_2">| fmul <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fmul <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fmul <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fmul <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fmulp_1">| fmulp <a href="#registers">stx</a></pre>
+<pre id="fmulp_2">| fmulp <a href="#registers">stx</a>, <a href="#registers">st0</a></pre>
+<pre id="fnclex_0">| fnclex</pre>
+<pre id="fnop_0">| fnop</pre>
+<pre id="fnstcw_1">| fnstcw word <a href="#memory">m16</a></pre>
+<pre id="fnstsw_1">| fnstsw ax
+| fnstsw word <a href="#memory">m16</a></pre>
+<pre id="fpatan_0">| fpatan</pre>
+<pre id="fpop_0">| fpop</pre>
+<pre id="fprem1_0">| fprem1</pre>
+<pre id="fprem_0">| fprem</pre>
+<pre id="fptan_0">| fptan</pre>
+<pre id="frndint_0">| frndint</pre>
+<pre id="fs_0">| fs</pre>
+<pre id="fscale_0">| fscale</pre>
+<pre id="fsin_0">| fsin</pre>
+<pre id="fsincos_0">| fsincos</pre>
+<pre id="fsqrt_0">| fsqrt</pre>
+<pre id="fst_1">| fst <a href="#registers">stx</a>
+| fst dword <a href="#memory">m32</a>
+| fst qword <a href="#memory">m64</a></pre>
+<pre id="fstcw_1">| fstcw word <a href="#memory">m16</a></pre>
+<pre id="fstp_1">| fstp <a href="#registers">stx</a>
+| fstp dword <a href="#memory">m32</a>
+| fstp qword <a href="#memory">m64</a>
+| fstp tword <a href="#memory">m80</a></pre>
+<pre id="fstsw_1">| fstsw ax
+| fstsw word <a href="#memory">m16</a></pre>
+<pre id="fsub_1">| fsub <a href="#registers">stx</a>
+| fsub dword <a href="#memory">m32</a>
+| fsub qword <a href="#memory">m64</a></pre>
+<pre id="fsub_2">| fsub <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fsub <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fsub <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fsub <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fsubp_1">| fsubp <a href="#registers">stx</a></pre>
+<pre id="fsubp_2">| fsubp <a href="#registers">stx</a>, <a href="#registers">st0</a></pre>
+<pre id="fsubr_1">| fsubr <a href="#registers">stx</a>
+| fsubr dword <a href="#memory">m32</a>
+| fsubr qword <a href="#memory">m64</a></pre>
+<pre id="fsubr_2">| fsubr <a href="#registers">st0</a>, <a href="#registers">stx</a>
+| fsubr <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fsubr <a href="#registers">st0</a>, dword <a href="#memory">m32</a>
+| fsubr <a href="#registers">st0</a>, qword <a href="#memory">m64</a></pre>
+<pre id="fsubrp_1">| fsubrp <a href="#registers">stx</a></pre>
+<pre id="fsubrp_2">| fsubrp <a href="#registers">stx</a>, <a href="#registers">st0</a></pre>
+<pre id="ftst_0">| ftst</pre>
+<pre id="fucom_1">| fucom <a href="#registers">stx</a></pre>
+<pre id="fucom_2">| fucom <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fucomi_1">| fucomi <a href="#registers">stx</a></pre>
+<pre id="fucomi_2">| fucomi <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fucomip_1">| fucomip <a href="#registers">stx</a></pre>
+<pre id="fucomip_2">| fucomip <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fucomp_1">| fucomp <a href="#registers">stx</a></pre>
+<pre id="fucomp_2">| fucomp <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fucompp_0">| fucompp</pre>
+<pre id="fwait_0">| fwait</pre>
+<pre id="fxam_0">| fxam</pre>
+<pre id="fxch_0">| fxch</pre>
+<pre id="fxch_1">| fxch <a href="#registers">stx</a></pre>
+<pre id="fxch_2">| fxch <a href="#registers">stx</a>, <a href="#registers">st0</a>
+| fxch <a href="#registers">st0</a>, <a href="#registers">stx</a></pre>
+<pre id="fxtract_0">| fxtract</pre>
+<pre id="fyl2x_0">| fyl2x</pre>
+<pre id="fyl2xp1_0">| fyl2xp1</pre>
+<hr>
+<h3 id="G">G</h3>
+<pre id="gs_0">| gs</pre>
+<hr>
+<h3 id="H">H</h3>
+<pre id="haddpd_2">| haddpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| haddpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="haddps_2">| haddps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| haddps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="hsubpd_2">| hsubpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| hsubpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="hsubps_2">| hsubps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| hsubps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<hr>
+<h3 id="I">I</h3>
+<pre id="idiv_1">| idiv <a href="#registers">reg</a>
+| idiv (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="imul_1">| imul <a href="#registers">reg</a>
+| imul (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="imul_2">| imul <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| imul <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| imul <a href="#registers">reg</a>, <a href="#immediates">imm32</a></pre>
+<pre id="imul_3">| imul <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| imul <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="inc_1">| inc <a href="#registers">reg</a>
+| inc (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="insertps_3">| insertps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| insertps <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>, <a href="#immediates">imm8</a></pre>
+<pre id="insertq_2">| insertq <a href="#registers">xmm</a>, <a href="#registers">xmm</a></pre>
+<pre id="insertq_4">| insertq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>, <a href="#immediates">imm8</a></pre>
+<pre id="int1_0">| int1</pre>
+<pre id="int3_0">| int3</pre>
+<pre id="int_1">| int <a href="#immediates">imm8</a></pre>
+<pre id="into_0">| into</pre>
+<hr>
+<h3 id="J">J</h3>
+<pre id="ja_1">| ja <a href="#jump-targets">lbl</a></pre>
+<pre id="jae_1">| jae <a href="#jump-targets">lbl</a></pre>
+<pre id="jb_1">| jb <a href="#jump-targets">lbl</a></pre>
+<pre id="jbe_1">| jbe <a href="#jump-targets">lbl</a></pre>
+<pre id="jc_1">| jc <a href="#jump-targets">lbl</a></pre>
+<pre id="je_1">| je <a href="#jump-targets">lbl</a></pre>
+<pre id="jg_1">| jg <a href="#jump-targets">lbl</a></pre>
+<pre id="jge_1">| jge <a href="#jump-targets">lbl</a></pre>
+<pre id="jl_1">| jl <a href="#jump-targets">lbl</a></pre>
+<pre id="jle_1">| jle <a href="#jump-targets">lbl</a></pre>
+<pre id="jmp_1">| jmp <a href="#jump-targets">lbl</a>
+| jmp <a href="#registers">r32</a> <span class="badge">x86</span>
+| jmp dword <a href="#memory">m32</a> <span class="badge">x86</span>
+| jmp <a href="#registers">r64</a> <span class="badge">x64</span>
+| jmp qword <a href="#memory">m64</a> <span class="badge">x64</span></pre>
+<pre id="jna_1">| jna <a href="#jump-targets">lbl</a></pre>
+<pre id="jnae_1">| jnae <a href="#jump-targets">lbl</a></pre>
+<pre id="jnb_1">| jnb <a href="#jump-targets">lbl</a></pre>
+<pre id="jnbe_1">| jnbe <a href="#jump-targets">lbl</a></pre>
+<pre id="jnc_1">| jnc <a href="#jump-targets">lbl</a></pre>
+<pre id="jne_1">| jne <a href="#jump-targets">lbl</a></pre>
+<pre id="jng_1">| jng <a href="#jump-targets">lbl</a></pre>
+<pre id="jnge_1">| jnge <a href="#jump-targets">lbl</a></pre>
+<pre id="jnl_1">| jnl <a href="#jump-targets">lbl</a></pre>
+<pre id="jnle_1">| jnle <a href="#jump-targets">lbl</a></pre>
+<pre id="jno_1">| jno <a href="#jump-targets">lbl</a></pre>
+<pre id="jnp_1">| jnp <a href="#jump-targets">lbl</a></pre>
+<pre id="jns_1">| jns <a href="#jump-targets">lbl</a></pre>
+<pre id="jnz_1">| jnz <a href="#jump-targets">lbl</a></pre>
+<pre id="jo_1">| jo <a href="#jump-targets">lbl</a></pre>
+<pre id="jp_1">| jp <a href="#jump-targets">lbl</a></pre>
+<pre id="jpe_1">| jpe <a href="#jump-targets">lbl</a></pre>
+<pre id="jpo_1">| jpo <a href="#jump-targets">lbl</a></pre>
+<pre id="js_1">| js <a href="#jump-targets">lbl</a></pre>
+<pre id="jz_1">| jz <a href="#jump-targets">lbl</a></pre>
+<hr>
+<h3 id="L">L</h3>
+<pre id="lahf_0">| lahf</pre>
+<pre id="lddqu_2">| lddqu <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="ldmxcsr_1">| ldmxcsr dword <a href="#memory">m32</a></pre>
+<pre id="lea_2">| lea <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="leave_0">| leave</pre>
+<pre id="lfence_0">| lfence</pre>
+<pre id="lock_0">| lock</pre>
+<pre id="lodsb_0">| lodsb</pre>
+<pre id="lodsd_0">| lodsd</pre>
+<pre id="lodsw_0">| lodsw</pre>
+<pre id="lzcnt_2">| lzcnt <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| lzcnt <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<hr>
+<h3 id="M">M</h3>
+<pre id="maskmovdqu_2">| maskmovdqu <a href="#registers">xmm</a>, <a href="#registers">xmm</a></pre>
+<pre id="maxpd_2">| maxpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| maxpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="maxps_2">| maxps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| maxps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="maxsd_2">| maxsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| maxsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="maxss_2">| maxss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| maxss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="mfence_0">| mfence</pre>
+<pre id="minpd_2">| minpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| minpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="minps_2">| minps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| minps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="minsd_2">| minsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| minsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="minss_2">| minss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| minss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="mov64_2">| mov64 <a href="#registers">r64</a>, <a href="#immediates">imm64</a> <span class="badge">x64</span>
+| mov64 (al|ax|eax|rax), <a href="#memory64">mem</a> <span class="badge">x64</span>
+| mov64 <a href="#memory64">mem</a>, (al|ax|eax|rax) <span class="badge">x64</span></pre>
+<pre id="mov_2">| mov <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| mov <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| mov <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| mov <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| mov (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="movapd_2">| movapd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movapd <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| movapd <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movaps_2">| movaps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movaps <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| movaps <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movd_2">| movd <a href="#registers">xmm</a>, <a href="#registers">r32</a>
+| movd <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>
+| movd <a href="#registers">xmm</a>, <a href="#registers">r64</a>
+| movd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movd <a href="#registers">r32</a>, <a href="#registers">xmm</a>
+| movd dword <a href="#memory">m32</a>, <a href="#registers">xmm</a>
+| movd <a href="#registers">r64</a>, <a href="#registers">xmm</a>
+| movd qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movddup_2">| movddup <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movddup <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="movdqa_2">| movdqa <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movdqa <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| movdqa <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movdqu_2">| movdqu <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movdqu <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| movdqu <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movhlps_2">| movhlps <a href="#registers">xmm</a>, <a href="#registers">xmm</a></pre>
+<pre id="movhpd_2">| movhpd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movhpd qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movhps_2">| movhps <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movhps qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movlhps_2">| movlhps <a href="#registers">xmm</a>, <a href="#registers">xmm</a></pre>
+<pre id="movlpd_2">| movlpd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movlpd qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movlps_2">| movlps <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movlps qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movmskpd_2">| movmskpd <a href="#registers">r32</a>, <a href="#registers">xmm</a></pre>
+<pre id="movmskps_2">| movmskps <a href="#registers">r32</a>, <a href="#registers">xmm</a></pre>
+<pre id="movntdq_2">| movntdq <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movntdqa_2">| movntdqa <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movntdqa <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="movnti_2">| movnti <a href="#memory">mem</a>, <a href="#registers">reg</a></pre>
+<pre id="movntpd_2">| movntpd <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movntps_2">| movntps <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movntsd_2">| movntsd qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movntss_2">| movntss dword <a href="#memory">m32</a>, <a href="#registers">xmm</a></pre>
+<pre id="movq_2">| movq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movq <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movq qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movsb_0">| movsb</pre>
+<pre id="movsd_0">| movsd</pre>
+<pre id="movsd_2">| movsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>
+| movsd qword <a href="#memory">m64</a>, <a href="#registers">xmm</a></pre>
+<pre id="movshdup_2">| movshdup <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movshdup <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="movsldup_2">| movsldup <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movsldup <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="movss_2">| movss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>
+| movss dword <a href="#memory">m32</a>, <a href="#registers">xmm</a></pre>
+<pre id="movsw_0">| movsw</pre>
+<pre id="movsx_2">| movsx <a href="#registers">r32</a>, <a href="#registers">r8</a>
+| movsx <a href="#registers">r32</a>, byte <a href="#memory">m8</a>
+| movsx <a href="#registers">r64</a>, <a href="#registers">r8</a>
+| movsx <a href="#registers">r64</a>, byte <a href="#memory">m8</a>
+| movsx <a href="#registers">r16</a>, <a href="#registers">r8</a>
+| movsx <a href="#registers">r16</a>, byte <a href="#memory">m8</a>
+| movsx <a href="#registers">r32</a>, <a href="#registers">r16</a>
+| movsx <a href="#registers">r32</a>, word <a href="#memory">m16</a>
+| movsx <a href="#registers">r64</a>, <a href="#registers">r16</a>
+| movsx <a href="#registers">r64</a>, word <a href="#memory">m16</a></pre>
+<pre id="movsxd_2">| movsxd <a href="#registers">r64</a>, <a href="#registers">r32</a> <span class="badge">x64</span>
+| movsxd <a href="#registers">r64</a>, dword <a href="#memory">m32</a> <span class="badge">x64</span></pre>
+<pre id="movupd_2">| movupd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movupd <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| movupd <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movups_2">| movups <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| movups <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| movups <a href="#memory">m128</a>, <a href="#registers">xmm</a></pre>
+<pre id="movzx_2">| movzx <a href="#registers">r32</a>, <a href="#registers">r8</a>
+| movzx <a href="#registers">r32</a>, byte <a href="#memory">m8</a>
+| movzx <a href="#registers">r64</a>, <a href="#registers">r8</a>
+| movzx <a href="#registers">r64</a>, byte <a href="#memory">m8</a>
+| movzx <a href="#registers">r16</a>, <a href="#registers">r8</a>
+| movzx <a href="#registers">r16</a>, byte <a href="#memory">m8</a>
+| movzx <a href="#registers">r32</a>, <a href="#registers">r16</a>
+| movzx <a href="#registers">r32</a>, word <a href="#memory">m16</a>
+| movzx <a href="#registers">r64</a>, <a href="#registers">r16</a>
+| movzx <a href="#registers">r64</a>, word <a href="#memory">m16</a></pre>
+<pre id="mpsadbw_3">| mpsadbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| mpsadbw <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="mul_1">| mul <a href="#registers">reg</a>
+| mul (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="mulpd_2">| mulpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| mulpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="mulps_2">| mulps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| mulps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="mulsd_2">| mulsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| mulsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="mulss_2">| mulss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| mulss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<hr>
+<h3 id="N">N</h3>
+<pre id="neg_1">| neg <a href="#registers">reg</a>
+| neg (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<pre id="nop_0">| nop</pre>
+<pre id="not_1">| not <a href="#registers">reg</a>
+| not (byte|word|dword|aword|qword) <a href="#memory">mem</a></pre>
+<hr>
+<h3 id="O">O</h3>
+<pre id="o16_0">| o16</pre>
+<pre id="or_2">| or <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| or <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| or <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| or <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| or (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="orpd_2">| orpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| orpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="orps_2">| orps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| orps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<hr>
+<h3 id="P">P</h3>
+<pre id="pabsb_2">| pabsb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pabsb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pabsd_2">| pabsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pabsd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pabsw_2">| pabsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pabsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="packssdw_2">| packssdw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| packssdw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="packsswb_2">| packsswb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| packsswb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="packusdw_2">| packusdw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| packusdw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="packuswb_2">| packuswb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| packuswb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddb_2">| paddb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddd_2">| paddd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddq_2">| paddq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddsb_2">| paddsb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddsb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddsw_2">| paddsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddusb_2">| paddusb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddusb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddusw_2">| paddusw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddusw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="paddw_2">| paddw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| paddw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="palignr_3">| palignr <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| palignr <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pand_2">| pand <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pand <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pandn_2">| pandn <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pandn <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pause_0">| pause</pre>
+<pre id="pavgb_2">| pavgb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pavgb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pavgw_2">| pavgw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pavgw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pblendvb_3">| pblendvb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm0</a>
+| pblendvb <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#registers">xmm0</a></pre>
+<pre id="pblendw_3">| pblendw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pblendw <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pcmpeqb_2">| pcmpeqb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpeqb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpeqd_2">| pcmpeqd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpeqd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpeqq_2">| pcmpeqq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpeqq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpeqw_2">| pcmpeqw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpeqw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpestri_3">| pcmpestri <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pcmpestri <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pcmpestrm_3">| pcmpestrm <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pcmpestrm <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pcmpgtb_2">| pcmpgtb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpgtb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpgtd_2">| pcmpgtd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpgtd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpgtq_2">| pcmpgtq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpgtq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpgtw_2">| pcmpgtw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pcmpgtw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pcmpistri_3">| pcmpistri <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pcmpistri <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pcmpistrm_3">| pcmpistrm <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pcmpistrm <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pextrb_3">| pextrb <a href="#registers">r32</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pextrb <a href="#registers">r64</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pextrb byte <a href="#memory">m8</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pextrd_3">| pextrd <a href="#registers">r32</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pextrd dword <a href="#memory">m32</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pextrq_3">| pextrq <a href="#registers">r64</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pextrq qword <a href="#memory">m64</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pextrw_3">| pextrw <a href="#registers">r32</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pextrw word <a href="#memory">m16</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="phaddd_2">| phaddd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phaddd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="phaddsw_2">| phaddsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phaddsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="phaddw_2">| phaddw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phaddw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="phminposuw_2">| phminposuw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phminposuw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="phsubd_2">| phsubd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phsubd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="phsubsw_2">| phsubsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phsubsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="phsubw_2">| phsubw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| phsubw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pinsrb_3">| pinsrb <a href="#registers">xmm</a>, <a href="#registers">r32</a>, <a href="#immediates">imm8</a>
+| pinsrb <a href="#registers">xmm</a>, byte <a href="#memory">m8</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pinsrd_3">| pinsrd <a href="#registers">xmm</a>, <a href="#registers">r32</a>, <a href="#immediates">imm8</a>
+| pinsrd <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pinsrq_3">| pinsrq <a href="#registers">xmm</a>, <a href="#registers">r64</a>, <a href="#immediates">imm8</a>
+| pinsrq <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pinsrw_3">| pinsrw <a href="#registers">xmm</a>, <a href="#registers">r32</a>, <a href="#immediates">imm8</a>
+| pinsrw <a href="#registers">xmm</a>, word <a href="#memory">m16</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pmaddubsw_2">| pmaddubsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaddubsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaddwd_2">| pmaddwd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaddwd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaxsb_2">| pmaxsb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaxsb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaxsd_2">| pmaxsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaxsd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaxsw_2">| pmaxsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaxsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaxub_2">| pmaxub <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaxub <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaxud_2">| pmaxud <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaxud <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmaxuw_2">| pmaxuw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmaxuw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pminsb_2">| pminsb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pminsb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pminsd_2">| pminsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pminsd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pminsw_2">| pminsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pminsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pminub_2">| pminub <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pminub <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pminud_2">| pminud <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pminud <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pminuw_2">| pminuw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pminuw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmovmskb_2">| pmovmskb <a href="#registers">r32</a>, <a href="#registers">xmm</a></pre>
+<pre id="pmovsxbd_2">| pmovsxbd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovsxbd <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="pmovsxbq_2">| pmovsxbq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovsxbq <a href="#registers">xmm</a>, word <a href="#memory">m16</a></pre>
+<pre id="pmovsxbw_2">| pmovsxbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovsxbw <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="pmovsxdq_2">| pmovsxdq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovsxdq <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="pmovsxwd_2">| pmovsxwd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovsxwd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="pmovsxwq_2">| pmovsxwq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovsxwq <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="pmovzxbd_2">| pmovzxbd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovzxbd <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="pmovzxbq_2">| pmovzxbq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovzxbq <a href="#registers">xmm</a>, word <a href="#memory">m16</a></pre>
+<pre id="pmovzxbw_2">| pmovzxbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovzxbw <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="pmovzxdq_2">| pmovzxdq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovzxdq <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="pmovzxwd_2">| pmovzxwd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovzxwd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="pmovzxwq_2">| pmovzxwq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmovzxwq <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="pmuldq_2">| pmuldq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmuldq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmulhrsw_2">| pmulhrsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmulhrsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmulhuw_2">| pmulhuw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmulhuw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmulhw_2">| pmulhw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmulhw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmulld_2">| pmulld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmulld <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmullw_2">| pmullw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmullw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pmuludq_2">| pmuludq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pmuludq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pop_1">| pop <a href="#registers">r16</a>
+| pop word <a href="#memory">m16</a>
+| pop <a href="#registers">r32</a> <span class="badge">x86</span>
+| pop dword <a href="#memory">m32</a> <span class="badge">x86</span>
+| pop <a href="#registers">r64</a> <span class="badge">x64</span>
+| pop qword <a href="#memory">m64</a> <span class="badge">x64</span></pre>
+<pre id="popcnt_2">| popcnt <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| popcnt <a href="#registers">reg</a>, <a href="#memory">mem</a></pre>
+<pre id="popf_0">| popf</pre>
+<pre id="popfd_0">| popfd <span class="badge">x86</span></pre>
+<pre id="popfq_0">| popfq <span class="badge">x64</span></pre>
+<pre id="por_2">| por <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| por <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="prefetchnta_1">| prefetchnta byte <a href="#memory">m8</a></pre>
+<pre id="prefetcht0_1">| prefetcht0 byte <a href="#memory">m8</a></pre>
+<pre id="prefetcht1_1">| prefetcht1 byte <a href="#memory">m8</a></pre>
+<pre id="prefetcht2_1">| prefetcht2 byte <a href="#memory">m8</a></pre>
+<pre id="psadbw_2">| psadbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psadbw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pshufb_2">| pshufb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pshufb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pshufd_3">| pshufd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pshufd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pshufhw_3">| pshufhw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pshufhw <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pshuflw_3">| pshuflw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| pshuflw <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psignb_2">| psignb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psignb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psignd_2">| psignd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psignd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psignw_2">| psignw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psignw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="pslld_2">| pslld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pslld <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| pslld <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="pslldq_2">| pslldq <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psllq_2">| psllq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psllq <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psllq <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psllw_2">| psllw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psllw <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psllw <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psrad_2">| psrad <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psrad <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psrad <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psraw_2">| psraw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psraw <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psraw <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psrld_2">| psrld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psrld <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psrld <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psrldq_2">| psrldq <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psrlq_2">| psrlq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psrlq <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psrlq <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psrlw_2">| psrlw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psrlw <a href="#registers">xmm</a>, <a href="#memory">m128</a>
+| psrlw <a href="#registers">xmm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="psubb_2">| psubb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubd_2">| psubd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubq_2">| psubq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubsb_2">| psubsb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubsb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubsw_2">| psubsw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubsw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubusb_2">| psubusb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubusb <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubusw_2">| psubusw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubusw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="psubw_2">| psubw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| psubw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="ptest_2">| ptest <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| ptest <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpckhbw_2">| punpckhbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpckhbw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpckhdq_2">| punpckhdq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpckhdq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpckhqdq_2">| punpckhqdq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpckhqdq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpckhwd_2">| punpckhwd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpckhwd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpcklbw_2">| punpcklbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpcklbw <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpckldq_2">| punpckldq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpckldq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpcklqdq_2">| punpcklqdq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpcklqdq <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="punpcklwd_2">| punpcklwd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| punpcklwd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="push_1">| push <a href="#registers">r16</a>
+| push word <a href="#memory">m16</a>
+| push <a href="#immediates">imm32</a>
+| push <a href="#registers">r32</a> <span class="badge">x86</span>
+| push dword <a href="#memory">m32</a> <span class="badge">x86</span>
+| push <a href="#registers">r64</a> <span class="badge">x64</span>
+| push qword <a href="#memory">m64</a> <span class="badge">x64</span></pre>
+<pre id="pushf_0">| pushf</pre>
+<pre id="pushfd_0">| pushfd <span class="badge">x86</span></pre>
+<pre id="pushfq_0">| pushfq <span class="badge">x64</span></pre>
+<pre id="pxor_2">| pxor <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| pxor <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<hr>
+<h3 id="R">R</h3>
+<pre id="rcl_2">| rcl <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| rcl (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| rcl <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| rcl (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="rcpps_2">| rcpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| rcpps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="rcpss_2">| rcpss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| rcpss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="rcr_2">| rcr <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| rcr (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| rcr <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| rcr (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="rdtsc_0">| rdtsc</pre>
+<pre id="rep_0">| rep</pre>
+<pre id="repe_0">| repe</pre>
+<pre id="repne_0">| repne</pre>
+<pre id="repnz_0">| repnz</pre>
+<pre id="repz_0">| repz</pre>
+<pre id="ret_0">| ret</pre>
+<pre id="ret_1">| ret <a href="#immediates">imm16</a></pre>
+<pre id="rol_2">| rol <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| rol (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| rol <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| rol (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="ror_2">| ror <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| ror (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| ror <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| ror (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="roundpd_3">| roundpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| roundpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="roundps_3">| roundps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| roundps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="roundsd_3">| roundsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| roundsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>, <a href="#immediates">imm8</a></pre>
+<pre id="roundss_3">| roundss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| roundss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a>, <a href="#immediates">imm8</a></pre>
+<pre id="rsqrtps_2">| rsqrtps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| rsqrtps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="rsqrtss_2">| rsqrtss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| rsqrtss <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<hr>
+<h3 id="S">S</h3>
+<pre id="sahf_0">| sahf</pre>
+<pre id="sal_2">| sal <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| sal (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| sal <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| sal (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="sar_2">| sar <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| sar (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| sar <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| sar (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="sbb_2">| sbb <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| sbb <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| sbb <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| sbb <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| sbb (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="scasb_0">| scasb</pre>
+<pre id="scasd_0">| scasd</pre>
+<pre id="scasw_0">| scasw</pre>
+<pre id="seta_1">| seta <a href="#registers">r8</a>
+| seta byte <a href="#memory">m8</a></pre>
+<pre id="setae_1">| setae <a href="#registers">r8</a>
+| setae byte <a href="#memory">m8</a></pre>
+<pre id="setb_1">| setb <a href="#registers">r8</a>
+| setb byte <a href="#memory">m8</a></pre>
+<pre id="setbe_1">| setbe <a href="#registers">r8</a>
+| setbe byte <a href="#memory">m8</a></pre>
+<pre id="setc_1">| setc <a href="#registers">r8</a>
+| setc byte <a href="#memory">m8</a></pre>
+<pre id="sete_1">| sete <a href="#registers">r8</a>
+| sete byte <a href="#memory">m8</a></pre>
+<pre id="setg_1">| setg <a href="#registers">r8</a>
+| setg byte <a href="#memory">m8</a></pre>
+<pre id="setge_1">| setge <a href="#registers">r8</a>
+| setge byte <a href="#memory">m8</a></pre>
+<pre id="setl_1">| setl <a href="#registers">r8</a>
+| setl byte <a href="#memory">m8</a></pre>
+<pre id="setle_1">| setle <a href="#registers">r8</a>
+| setle byte <a href="#memory">m8</a></pre>
+<pre id="setna_1">| setna <a href="#registers">r8</a>
+| setna byte <a href="#memory">m8</a></pre>
+<pre id="setnae_1">| setnae <a href="#registers">r8</a>
+| setnae byte <a href="#memory">m8</a></pre>
+<pre id="setnb_1">| setnb <a href="#registers">r8</a>
+| setnb byte <a href="#memory">m8</a></pre>
+<pre id="setnbe_1">| setnbe <a href="#registers">r8</a>
+| setnbe byte <a href="#memory">m8</a></pre>
+<pre id="setnc_1">| setnc <a href="#registers">r8</a>
+| setnc byte <a href="#memory">m8</a></pre>
+<pre id="setne_1">| setne <a href="#registers">r8</a>
+| setne byte <a href="#memory">m8</a></pre>
+<pre id="setng_1">| setng <a href="#registers">r8</a>
+| setng byte <a href="#memory">m8</a></pre>
+<pre id="setnge_1">| setnge <a href="#registers">r8</a>
+| setnge byte <a href="#memory">m8</a></pre>
+<pre id="setnl_1">| setnl <a href="#registers">r8</a>
+| setnl byte <a href="#memory">m8</a></pre>
+<pre id="setnle_1">| setnle <a href="#registers">r8</a>
+| setnle byte <a href="#memory">m8</a></pre>
+<pre id="setno_1">| setno <a href="#registers">r8</a>
+| setno byte <a href="#memory">m8</a></pre>
+<pre id="setnp_1">| setnp <a href="#registers">r8</a>
+| setnp byte <a href="#memory">m8</a></pre>
+<pre id="setns_1">| setns <a href="#registers">r8</a>
+| setns byte <a href="#memory">m8</a></pre>
+<pre id="setnz_1">| setnz <a href="#registers">r8</a>
+| setnz byte <a href="#memory">m8</a></pre>
+<pre id="seto_1">| seto <a href="#registers">r8</a>
+| seto byte <a href="#memory">m8</a></pre>
+<pre id="setp_1">| setp <a href="#registers">r8</a>
+| setp byte <a href="#memory">m8</a></pre>
+<pre id="setpe_1">| setpe <a href="#registers">r8</a>
+| setpe byte <a href="#memory">m8</a></pre>
+<pre id="setpo_1">| setpo <a href="#registers">r8</a>
+| setpo byte <a href="#memory">m8</a></pre>
+<pre id="sets_1">| sets <a href="#registers">r8</a>
+| sets byte <a href="#memory">m8</a></pre>
+<pre id="setz_1">| setz <a href="#registers">r8</a>
+| setz byte <a href="#memory">m8</a></pre>
+<pre id="sfence_0">| sfence</pre>
+<pre id="shl_2">| shl <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| shl (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| shl <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| shl (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="shr_2">| shr <a href="#registers">reg</a>, <a href="#registers">cl</a>
+| shr (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#registers">cl</a>
+| shr <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
+| shr (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="shufpd_3">| shufpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| shufpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="shufps_3">| shufps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| shufps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
+<pre id="sqrtpd_2">| sqrtpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| sqrtpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="sqrtps_2">| sqrtps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| sqrtps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="sqrtsd_2">| sqrtsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| sqrtsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="sqrtss_2">| sqrtss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| sqrtss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="ss_0">| ss</pre>
+<pre id="stc_0">| stc</pre>
+<pre id="std_0">| std</pre>
+<pre id="stmxcsr_1">| stmxcsr dword <a href="#memory">m32</a></pre>
+<pre id="stosb_0">| stosb</pre>
+<pre id="stosd_0">| stosd</pre>
+<pre id="stosw_0">| stosw</pre>
+<pre id="sub_2">| sub <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| sub <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| sub <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| sub <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| sub (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="subpd_2">| subpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| subpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="subps_2">| subps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| subps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="subsd_2">| subsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| subsd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="subss_2">| subss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| subss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<hr>
+<h3 id="T">T</h3>
+<pre id="test_2">| test <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| test <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| test <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| test <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| test (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<hr>
+<h3 id="U">U</h3>
+<pre id="ucomisd_2">| ucomisd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| ucomisd <a href="#registers">xmm</a>, qword <a href="#memory">m64</a></pre>
+<pre id="ucomiss_2">| ucomiss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| ucomiss <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
+<pre id="unpckhpd_2">| unpckhpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| unpckhpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="unpckhps_2">| unpckhps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| unpckhps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="unpcklpd_2">| unpcklpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| unpcklpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="unpcklps_2">| unpcklps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| unpcklps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<hr>
+<h3 id="W">W</h3>
+<pre id="wait_0">| wait</pre>
+<hr>
+<h3 id="X">X</h3>
+<pre id="xchg_2">| xchg <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| xchg <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| xchg <a href="#memory">mem</a>, <a href="#registers">reg</a></pre>
+<pre id="xor_2">| xor <a href="#registers">reg</a>, <a href="#registers">reg</a>
+| xor <a href="#memory">mem</a>, <a href="#registers">reg</a>
+| xor <a href="#registers">reg</a>, <a href="#memory">mem</a>
+| xor <a href="#registers">reg</a>, <a href="#immediates">imm32</a>
+| xor (byte|word|dword|aword|qword) <a href="#memory">mem</a>, <a href="#immediates">imm32</a></pre>
+<pre id="xorpd_2">| xorpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| xorpd <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+<pre id="xorps_2">| xorps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
+| xorps <a href="#registers">xmm</a>, <a href="#memory">m128</a></pre>
+
+      </div>
+      <div class="col-md-3">
+        <div class="sidenav hidden-print" role="complementary">
+          <ul class="nav">
+                        <li>
+              <a href="#operands">Operands</a>
+              <ul class="nav">
+                <li><a href="#immediates">Immediates</a></li>
+                <li><a href="#registers">Registers</a></li>
+                <li><a href="#jump-targets">Jump Targets</a></li>
+                <li><a href="#memory">Memory</a></li>
+                <li><a href="#memory64">Memory (mov64)</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#labels">Labels</a>
+              <ul class="nav">
+                <li><a href="#local">Local</a></li>
+                <li><a href="#global">Global</a></li>
+                <li><a href="#dynamic">Dynamic</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#instructions">Instructions</a>
+              <ul class="nav">
+                <li><a href="#A">A</a></li>
+                <li><a href="#B">B</a></li>
+                <li><a href="#C">C</a></li>
+                <li><a href="#D">D</a></li>
+                <li><a href="#E">E</a></li>
+                <li><a href="#F">F</a></li>
+                <li><a href="#G">G</a></li>
+                <li><a href="#H">H</a></li>
+                <li><a href="#I">I</a></li>
+                <li><a href="#J">J</a></li>
+                <li><a href="#L">L</a></li>
+                <li><a href="#M">M</a></li>
+                <li><a href="#N">N</a></li>
+                <li><a href="#O">O</a></li>
+                <li><a href="#P">P</a></li>
+                <li><a href="#R">R</a></li>
+                <li><a href="#S">S</a></li>
+                <li><a href="#T">T</a></li>
+                <li><a href="#U">U</a></li>
+                <li><a href="#W">W</a></li>
+                <li><a href="#X">X</a></li>
+              </ul>
+            </li>
+            <li class="top"><a href="#top">Back to top</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="footer">
+      <a href="http://luajit.org/dynasm.html">DynASM</a> is free software developed by <a href="http://luajit.org/contact.html">Mike Pall</a>, released under the <a href="http://www.opensource.org/licenses/mit-license.php">MIT license</a>.<br>
+      This documentation is authored by <a href="https://github.com/corsix">Peter Cawley</a>, and is released as <a rel="license" href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+    </div>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/dynasm-doc.js"></script>
+  </body>
+</html>

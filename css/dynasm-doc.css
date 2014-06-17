@@ -1,0 +1,70 @@
+.sidenav.js {
+  position: fixed;
+}
+.sidenav, .sidenav li a, .sidenav li.top a, .sidenav li.top.active a {
+  font-size: 13px;
+  padding: 4px 20px;
+  padding-left: 20px;
+  font-weight: 700;
+  color: #999;
+  border-left: none;
+}
+.sidenav li li a {
+  padding-left: 30px;
+}
+.sidenav li a:hover, .sidenav li.active > a {
+  background-color: transparent;
+  padding-left: 18px;
+  border-left: 2px black solid;
+  color: #000;
+}
+.sidenav.js li li {
+  display: none;
+}
+.sidenav li.active li {
+  display: inherit;
+}
+.sidenav li li a:hover, .sidenav li li.active a {
+  background-color: transparent;
+  padding-left: 29px;
+  border-left-width: 1px;
+}
+.sidenav li.top {
+  margin-top: 1em;
+}
+.sidenav li.top.active {
+  display: none;
+}
+
+.macro-default:before {
+  content: "#ifndef " attr(data-name) "\a"
+}
+.macro-default:after {
+  content: "\a#endif"
+}
+.footer {
+  padding-top: 40px;
+  padding-bottom: 40px;
+  margin-top: 100px;
+  color: #777;
+  text-align: center;
+  border-top: 1px solid #e5e5e5;
+}
+pre.diff, pre.listing {
+  max-height: 35em;
+}
+pre.diff span.p {
+  background-color: #d5f5d5
+}
+pre.diff span.p:before {
+  content: "+ "
+}
+pre.diff span.m {
+  background-color: #f5d5d5
+}
+pre.diff span.m:before {
+  content: "- "
+}
+pre span.c:before {
+  content: "$ "
+}

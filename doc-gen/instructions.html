@@ -1,0 +1,210 @@
+      <h2 id="operands">Operands</h2>
+        <p>Every instruction accepts zero or more operands, which are comma-separated, subject to balanced parentheses
+           (<code>()</code>, <code>[]</code>, and <code>{}</code>). For example, <code>not eax</code> has one operand,
+           while both of <code>mov eax, ebx</code> and <code>mov [eax+offsetof(foo,x)], arr[y,z]</code> have two operands.
+           Every operand will either be an immediate value, a named register, a jump target, or a memory reference.</p>
+        <hr>
+        <h3 id="immediates">Immediates</h3>
+        <p>The simplest immediate operands are decimal and hexadecimal integers, for example <code>ret 32</code> and
+           <code>ret 0x20</code>.</p>
+        <p>Any C/C++ expression can be used where an immediate operand is expected, for example <code>ret num_args*4</code>.
+           The expression will be evaluated when <code>dasm_put</code> is called, and
+           the resulting value will become a constant in the generated machine code. Such expressions are sometimes referred
+           to as encoding-time constants, and are a a superset of compile-time constants.</p>
+        <p>Where an immediate can be used, it'll be listed as <code class="nolink">immNN</code>, where <code>NN</code> is the maximum
+           bit width of the immediate. In cases where instructions have different forms for different bit-widths of immediate
+           or particular immediate values, DynASM will automatically choose the most compact form possible on a value by
+           value basis.</p>
+        <p>Note that the special <span class="badge">x64</span> instruction <code><a href="#mov64_2">mov64</a></code> is the
+           only instruction with a 64-bit immediate operand.</p>
+        <hr>
+        <h3 id="registers">Registers</h3>
+        <p>The following integer registers can be used, using either a uniform numeric scheme or traditional names:</p>
+        <table class="table table-striped">
+        <thead><tr><th>64-bit</th><th>32-bit </th><th>16-bit </th><th>8-bit High</th><th>8-bit Low</th></tr></thead>
+        <tbody>
+          <tr><td><code>rax</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x64</span></td><td><code>eax</code> / <code>r0d</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x86</span></td><td><code>ax</code> / <code>r0w</code></td><td><code>ah</code></td><td><code>al</code> / <code>r0b</code></td></tr>
+          <tr><td><code>rcx</code> <span class="badge">x64</span> / <code>r1</code> <span class="badge">x64</span></td><td><code>ecx</code> / <code>r1d</code> <span class="badge">x64</span> / <code>r1</code> <span class="badge">x86</span></td><td><code>cx</code> / <code>r1w</code></td><td><code>ch</code></td><td><code>cl</code> / <code>r1b</code></td></tr>
+          <tr><td><code>rdx</code> <span class="badge">x64</span> / <code>r2</code> <span class="badge">x64</span></td><td><code>edx</code> / <code>r2d</code> <span class="badge">x64</span> / <code>r2</code> <span class="badge">x86</span></td><td><code>dx</code> / <code>r2w</code></td><td><code>dh</code></td><td><code>dl</code> / <code>r2b</code></td></tr>
+          <tr><td><code>rbx</code> <span class="badge">x64</span> / <code>r3</code> <span class="badge">x64</span></td><td><code>ebx</code> / <code>r3d</code> <span class="badge">x64</span> / <code>r3</code> <span class="badge">x86</span></td><td><code>bx</code> / <code>r3w</code></td><td><code>bh</code></td><td><code>bl</code> / <code>r3b</code></td></tr>
+          <tr><td><code>rsp</code> <span class="badge">x64</span> / <code>r4</code> <span class="badge">x64</span></td><td><code>esp</code> / <code>r4d</code> <span class="badge">x64</span> / <code>r4</code> <span class="badge">x86</span></td><td><code>sp</code> / <code>r4w</code></td><td></td><td><code>r4b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>rbp</code> <span class="badge">x64</span> / <code>r5</code> <span class="badge">x64</span></td><td><code>ebp</code> / <code>r5d</code> <span class="badge">x64</span> / <code>r5</code> <span class="badge">x86</span></td><td><code>bp</code> / <code>r5w</code></td><td></td><td><code>r5b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>rsi</code> <span class="badge">x64</span> / <code>r6</code> <span class="badge">x64</span></td><td><code>esi</code> / <code>r6d</code> <span class="badge">x64</span> / <code>r6</code> <span class="badge">x86</span></td><td><code>si</code> / <code>r6w</code></td><td></td><td><code>r6b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>rdi</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x64</span></td><td><code>edi</code> / <code>r7d</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x86</span></td><td><code>di</code> / <code>r7w</code></td><td></td><td><code>r7b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r8</code> <span class="badge">x64</span></td><td><code>r8d</code> <span class="badge">x64</span></td><td><code>r8w</code> <span class="badge">x64</span></td><td></td><td><code>r8b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r9</code> <span class="badge">x64</span></td><td><code>r9d</code> <span class="badge">x64</span></td><td><code>r9w</code> <span class="badge">x64</span></td><td></td><td><code>r9b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r10</code> <span class="badge">x64</span></td><td><code>r10d</code> <span class="badge">x64</span></td><td><code>r10w</code> <span class="badge">x64</span></td><td></td><td><code>r10b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r11</code> <span class="badge">x64</span></td><td><code>r11d</code> <span class="badge">x64</span></td><td><code>r11w</code> <span class="badge">x64</span></td><td></td><td><code>r11b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r12</code> <span class="badge">x64</span></td><td><code>r12d</code> <span class="badge">x64</span></td><td><code>r12w</code> <span class="badge">x64</span></td><td></td><td><code>r12b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r13</code> <span class="badge">x64</span></td><td><code>r13d</code> <span class="badge">x64</span></td><td><code>r13w</code> <span class="badge">x64</span></td><td></td><td><code>r13b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r14</code> <span class="badge">x64</span></td><td><code>r14d</code> <span class="badge">x64</span></td><td><code>r14w</code> <span class="badge">x64</span></td><td></td><td><code>r14b</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>r15</code> <span class="badge">x64</span></td><td><code>r15d</code> <span class="badge">x64</span></td><td><code>r15w</code> <span class="badge">x64</span></td><td></td><td><code>r15b</code> <span class="badge">x64</span></td></tr>
+        </tbody>
+        </table>
+        <p>The x87 registers can be used by their names <code>st0</code> through <code>st7</code>.</p>
+        <p>The SSE registers can be used by their names <code>xmm0</code> through <code>xmm7</code> <span class="badge">x86</span>
+           or <code>xmm15</code> <span class="badge">x64</span>.</p>
+        <p>In addition to the static names, the first eight registers from each family can be named dynamically:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Format</th><th>Indexable Registers</th></tr></thead>
+        <tbody>
+          <tr><td><code>Rq(imm3)</code> <span class="badge">x64</span></td><td><code>r0</code> / <code>rax</code> through <code>r7</code> / <code>rdi</code></td></tr>
+          <tr><td><code>Ra(imm3)</code></td><td><code>r0</code> / <code>eax</code> <span class="badge">x86</span> / <code>rax</code> <span class="badge">x64</span> through <code>r7</code> / <code>edi</code> <span class="badge">x86</span> / <code>rdi</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>Rd(imm3)</code></td><td><code>r0d</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x86</span> / <code>eax</code> through <code>r7d</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x86</span> / <code>edi</code></td></tr>
+          <tr><td><code>Rw(imm3)</code></td><td><code>r0w</code> / <code>ax</code> through <code>r7w</code> / <code>di</code></td></tr>
+          <tr><td><code>Rb(imm3)</code> <span class="badge">x86</span></td><td><code>r0b</code> / <code>al</code> through <code>r3b</code> / <code>bl</code>, then <code>ah</code>, <code>ch</code>, <code>dh</code>, <code>bh</code></td></tr>
+          <tr><td><code>Rb(imm2)</code> <span class="badge">x64</span></td><td><code>r0b</code> / <code>al</code> through <code>r3b</code> / <code>bl</code></td></tr>
+          <tr><td><code>Rf(imm3)</code></td><td><code>st0</code> through <code>st7</code></td></tr>
+          <tr><td><code>xmm(imm3)</code></td><td><code>xmm0</code> through <code>xmm7</code></td></tr>
+        </tbody>
+        </table>
+        <p>Where an integer register can be used, it'll be listed as <code>reg</code> or <code>rNN</code>, where <code>NN</code> is the bit width
+           of the register. Where an x87 or SSE register can it used, it'll be listed as <code>stx</code> or <code>xmm</code>
+           respectively. Where a specific register has to be used, it'll be listed as the traditional register name.</p>
+        <hr>
+        <h3 id="jump-targets">Jump Targets</h3>
+        <p>Most instructions that affect the instruction pointer have a so-called jump target operand (for the sake
+           of simplicitly, <code>call</code> instructions use the jump-target terminology), of which there are six
+           forms:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Format</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>&lt;1</code> through <code>&lt;9</code></td><td>Jump backwards to local label <code>1:</code> through <code>9:</code>.</td></tr>
+          <tr><td><code>&gt;1</code> through <code>&gt;9</code></td><td>Jump forwards to local label <code>1:</code> through <code>9:</code>.</td></tr>
+          <tr><td><code>-&gt;<em>name</em></code></td><td>Jump to the global label <code>-&gt;<em>name</em>:</code>.</td></tr>
+          <tr><td><code>=&gt;imm32</code></td><td>Jump to the dynamic label <code>=&gt;imm32:</code>.</td></tr>
+          <tr><td><code>&amp;<em>expr</em></code> <span class="badge">x86</span></td><td>Jump to <code>(ptrdiff_t)(<em>expr</em>)</code>, as computed when <code>dasm_put</code> is called.</td></tr>
+          <tr><td><code>extern ...</code></td><td>Jump to a location determined by <code><a href="reference.html#DASM_EXTERN">DASM_EXTERN</a></code> during <code>dasm_encode</code>.</td></tr>
+        </tbody>
+        </table>
+        <p>In the context of local labels, <em>forwards</em> and <em>backwards</em> refer to the generated instruction
+           stream rather than any lexical property of the DynASM source file, meaning that the following two examples
+           are equivalent:</p>
+        <table style="width:100%"><tr><td><pre style="margin-right:.5em">
+
+
+
+void a(Dst_DECL) {
+  | jmp >1
+  |1:
+}</pre></td><td><pre style="margin-left:.5em">static void b(Dst_DECL) {
+  |1:
+}
+void a(Dst_DECL) {
+  | jmp >1
+  b(Dst);
+}</pre></td></tr></table>
+        <p>Where a jump target can be used, it'll be listed as <code>lbl</code>.</p>
+        <hr>
+        <h3 id="memory">Memory</h3>
+        <p>There are a wide variety of possible forms for operands that refer to locations in memory:</p>
+        <table class="table table-striped">
+        <thead><tr><th>32-bit form <span class="badge">x86</span></th><th>64-bit form <span class="badge">x64</span></th></tr></thead>
+        <tbody>
+          <tr><td><code>[r32]</code></td><td><code>[r64]</code></td></tr>
+          <tr><td><code>[r32(+|-)imm32]</code></td><td><code>[r64(+|-)imm32]</code></td></tr>
+          <tr><td><code>[r32+r32]</code></td><td><code>[r64+r64]</code></td></tr>
+          <tr><td><code>[r32+r32(+|-)imm32]</code></td><td><code>[r64+r64(+|-)imm32]</code></td></tr>
+          <tr><td><code>[r32*(1|2|4|8)]</code></td><td><code>[r64*(1|2|4|8)]</code></td></tr>
+          <tr><td><code>[r32*(1|2|4|8)(+|-)imm32]</code></td><td><code>[r64*(1|2|4|8)(+|-)imm32]</code></td></tr>
+          <tr><td><code>[r32+r32*(1|2|4|8)]</code></td><td><code>[r64+r64*(1|2|4|8)]</code></td></tr>
+          <tr><td><code>[r32+r32*(1|2|4|8)(+|-)imm32]</code></td><td><code>[r64+r64*(1|2|4|8)(+|-)imm32]</code></td></tr>
+          <tr><td><code>[imm32]</code></td><td><code>[imm32]</code> (limited to low 2GB of address space)</td></tr>
+          <tr><td><code>[lbl]</code> (encoded as an absolute address)</td><td><code>[lbl]</code> (encoded as rip-relative with 32-bit displacement)</td></tr>
+        </tbody>
+        </table>
+        <p>Note that the DynASM parser is sensitive to order. For example, <code>[r0+r1*2]</code> is a recognised
+           memory operand, but <code>[2*r1+r0]</code> is not, despite it seeming identical. Also note that the parser
+           is sensitive to whitespace when dynamic registers are used in memory operands: there should be
+           no whitespace after the trailing <code>)</code> of the dynamic register and any <code>+</code> or <code>*</code>
+           character which follows.</p>
+        <p>Most of these forms are self-explanatory, with the possible exception of <code>[lbl]</code>. This form allows
+           any jump target to be used as a memory operand: the memory location it refers to is the location that would
+           be jumped to.</p>
+        <p>The <code>.type</code> directive can be used to create syntactic
+           sugar for the <code>[r32(+|-)imm32]</code> and <code>[r64(+|-)imm32]</code> forms, therein making
+           it easier to work with C structures.</p>
+        <p>A memory operand can be preceded by one of the following size specifiers to control the number of bytes
+           accessed at the memory location:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Memory Size Prefix</th><th>Number of bytes accessed</th></tr></thead>
+        <tbody>
+          <tr><td><code>byte&nbsp;</code></td><td>1</td></tr>
+          <tr><td><code>word&nbsp;</code></td><td>2</td></tr>
+          <tr><td><code>dword&nbsp;</code></td><td>4</td></tr>
+          <tr><td><code>aword&nbsp;</code></td><td>4 <span class="badge">x86</span> or 8 <span class="badge">x64</span></td></tr>
+          <tr><td><code>qword&nbsp;</code></td><td>8</td></tr>
+          <tr><td><code>tword&nbsp;</code></td><td>10 (used for x87)</td></tr>
+          <tr><td><code>oword&nbsp;</code></td><td>16 (used for SSE)</td></tr>
+        </tbody>
+        </table>
+        <p>Some instructions will infer the memory size prefix based on the size of other operands.
+           Where an instruction requires a memory size prefix (for example because it cannot be inferred), the
+           applicable prefix or prefixes will be listed. Where a memory operand can be used, it'll be listed
+           as <code>mem</code> or <code>mNN</code>, where <code>NN</code> is the number of
+           <strong>bits</strong> accessed.
+        <hr>
+        <h3 id="memory64">Memory (<code>mov64</code>)</h3>
+        <p>The special <span class="badge">x64</span> instruction <code><a href="#mov64_2">mov64</a></code> accepts the
+           following memory forms <strong>instead of</strong> the usual forms:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Form</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>[&amp;<em>expr</em>]</code></td><td>Access <code>(ptrdiff_t)(<em>expr</em>)</code>, as computed when <code>dasm_put</code> is called.</td></tr>
+          <tr><td><code>[imm64]</code></td><td>Like <code>[imm32]</code>, except not limited to the low 2GB of address space.</td></tr>
+        </tbody>
+        </table>
+        <hr>
+        <h2 id="labels">Labels</h2>
+        <p>As well as instructions and directives, DynASM supports labels, which are locations in
+           the generated machine code that can be used as jump targets. Labels are defined by suffixing
+           the label name with a colon.</p>
+        <hr>
+        <h3 id="local">Local Labels</h3>
+        <table style="width:100%"><tr><td><pre style="margin-right:1em">|1:
+|2:
+|3:</pre></td><td><pre style="margin-left:.5em;margin-right:.5em">|4:
+|5:
+|6:</pre></td><td><pre style="margin-left:1em">|7:
+|8:
+|9:</pre></td></tr></table>
+        <p>There are nine local labels, <code>1:</code> through <code>9:</code>, and they can be
+           defined multiple times per DynASM source file. Local label <code>i</code> is used as
+           a jump target by means of the syntax <code>&lt;i</code> or <code>&gt;i</code>. The
+           former syntax takes the most recent definition of <code>i</code> as the jump target,
+           while the latter syntax takes the next definition of <code>i</code> as the jump target.</p>
+        <p>Note that <code>&gt;i</code> must at some point be followed by <code>i:</code>, <code>&lt;i</code>
+           must have been preceded by <code>i:</code>, and <code>i:</code> must appear at
+           least once between any <code>&gt;i</code> and <code>&lt;i</code>. Equivalently, this
+           last condition means that a <code>&gt;i</code> cannot jump over a <code>&lt;i</code>, and
+           vice versa.</p>
+        <hr>
+        <h3 id="global">Global Labels</h3>
+        <pre>|-&gt;<em>name</em>:</pre>
+        <p>Any valid C identifier can be used as a global label. There is no limit on the number of
+           global labels used in a DynASM source file, but each individual global label can only be
+           defined once.</p>
+        <p>The <code>.globals</code> directive is used to emit a C enum consisting of every global
+           label in a DynASM source file, and the output from this directive must be passed to
+           <code>dasm_setupglobal</code>. Additionally, the <code>.globalnames</code> directive can be used to emit
+           an array of C strings consisting of the names of all global labels.</p>
+        <p>After <code>dasm_link</code> has been called, the address of a global label can be retreived
+           by indexing into the array previously passed to <code>dasm_setupglobal</code> using one of the enum
+           members defined by <code>.globals</code>.</p>
+        <hr>
+        <h3 id="dynamic">Dynamic Labels</h3>
+        <pre>|=&gt;imm32:</pre>
+        <p>Dynamic labels are similar to global labels, except that their names are non-negative
+           integers rather than C identifiers. Initially there is a limit of zero dynamic labels,
+           but this limit can be raised at any time by calling <code>dasm_growpc</code>. As with
+           global labels, each individual dynamic label can only be defined once.</p>
+        <p>As with dynamically indexed registers and immediate operands, a dynamic label's name
+           is an encoding-time constant. This means that any C/C++ expression can be used, and the
+           expression will be evaluated when <code>dasm_put</code> is called.</p>
+        <p>After <code>dasm_link</code> has been called, the address of a dynamic label can be retreived
+           by calling <code>dasm_getpclabel</code>, and adding the resulting value to the pointer passed
+           to <code>dasm_encode</code>.</p>
+        <hr>
+        <h2 id="instructions">Instructions</h3>
+        <p>The remainder of this document lists the instructions that can be used in DynASM
+           source files, and the operands they expect.</p>

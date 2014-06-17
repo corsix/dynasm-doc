@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>The Unofficial DynASM Documentation</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/dynasm-doc.css" rel="stylesheet">
+  </head>
+  <body data-spy="scroll" data-target=".sidenav">
+    <div class="navbar navbar-default" role="navigation">
+      <div class="container">
+        <div class="navbar-header" id="top">
+          <a class="navbar-brand" href="index.html">The Unofficial DynASM Documentation</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li><a href="index.html">Home</a></li>
+            <li class="active"><a href="tutorial.html">Tutorial</a></li>
+            <li><a href="reference.html">Reference</a></li>
+            <li><a href="instructions.html">Instruction Listing</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+    <div class="row">
+      <div class="col-md-9">
+            <h2 id="introduction">Introduction</h2>
+        <p>The starting point of this tutorial is the following <a href="http://en.wikipedia.org/wiki/Brainfsck">brainfsck</a> interpreter:</p>
+        <pre class="listing">#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+
+#define TAPE_SIZE 30000
+#define MAX_NESTING 100
+
+typedef struct bf_state
+{
+  unsigned char* tape;
+  unsigned char (*get_ch)(struct bf_state*);
+  void (*put_ch)(struct bf_state*, unsigned char);
+} bf_state_t;
+
+#define bad_program(s) exit(fprintf(stderr, "bad program near %.16s: %s\n", program, s))
+
+static void bf_interpret(const char* program, bf_state_t* state)
+{
+  const char* loops[MAX_NESTING];
+  int nloops = 0;
+  int n;
+  int nskip = 0;
+  unsigned char* tape_begin = state-&gt;tape - 1;
+  unsigned char* ptr = state-&gt;tape;
+  unsigned char* tape_end = state-&gt;tape + TAPE_SIZE - 1;
+  for(;;) {
+    switch(*program++) {
+    case '&lt;':
+      for(n = 1; *program == '&lt;'; ++n, ++program);
+      if(!nskip) {
+        ptr -= n;
+        while(ptr &lt;= tape_begin)
+          ptr += TAPE_SIZE;
+      }
+      break;
+    case '&gt;':
+      for(n = 1; *program == '&gt;'; ++n, ++program);
+      if(!nskip) {
+        ptr += n;
+        while(ptr &gt; tape_end)
+          ptr -= TAPE_SIZE;
+      }
+      break;
+    case '+':
+      for(n = 1; *program == '+'; ++n, ++program);
+      if(!nskip)
+        *ptr += n;
+      break;
+    case '-':
+      for(n = 1; *program == '-'; ++n, ++program);
+      if(!nskip)
+        *ptr -= n;
+      break;
+    case ',':
+      if(!nskip)
+        *ptr = state-&gt;get_ch(state);
+      break;
+    case '.':
+      if(!nskip)
+        state-&gt;put_ch(state, *ptr);
+      break;
+    case '[':
+      if(nloops == MAX_NESTING)
+        bad_program("Nesting too deep");
+      loops[nloops++] = program;
+      if(!*ptr)
+        ++nskip;
+      break;
+    case ']':
+      if(nloops == 0)
+        bad_program("] without matching [");
+      if(*ptr)
+        program = loops[nloops-1];
+      else
+        --nloops;
+      if(nskip)
+        --nskip;
+      break;
+    case 0:
+      if(nloops != 0)
+        program = "&lt;EOF&gt;", bad_program("[ without matching ]");
+      return;
+    }
+  }
+}
+
+static void bf_putchar(bf_state_t* s, unsigned char c)
+{
+  putchar((int)c);
+}
+
+static unsigned char bf_getchar(bf_state_t* s)
+{
+  return (unsigned char)getchar();
+}
+
+static void bf_run(const char* program)
+{
+  bf_state_t state;
+  unsigned char tape[TAPE_SIZE] = {0};
+  state.tape = tape;
+  state.get_ch = bf_getchar;
+  state.put_ch = bf_putchar;
+  bf_interpret(program, &amp;state);
+}
+
+int main(int argc, char** argv)
+{
+  if(argc == 2) {
+    long sz;
+    char* program;
+    FILE* f = fopen(argv[1], "r");
+    if(!f) {
+      fprintf(stderr, "Cannot open %s\n", argv[1]);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    program = (char*)malloc(sz + 1);
+    fseek(f, 0, SEEK_SET);
+    program[fread(program, 1, sz, f)] = 0;
+    fclose(f);
+    bf_run(program);
+    return 0;
+  } else {
+    fprintf(stderr, "Usage: %s INFILE.bf\n", argv[0]);
+    return 1;
+  }
+}</pre>
+        <p>Over the course of this tutorial, we'll use DynASM to transform this interpreter
+           into a brainfsck JIT compiler, therein hopefully making it faster.</p>
+        <p>To follow along, clone this repository and start from <code>bf_c.c</code>:</p>
+        <pre><span class="c">git clone https://github.com/corsix/dynasm-doc.git</span>
+<span class="c">cd dynasm-doc</span>
+<span class="c">git submodule update --init</span>
+<span class="c">cp bf_c.c tutorial.c</span></pre>
+        <p>The functionality of the starting point can be checked by running the following,
+           which should very slowly render the Mandelbrot set:</p>
+        <pre><span class="c">gcc -o tutorial tutorial.c</span>
+<span class="c">./tutorial mandelbrot.bf</span></pre>
+      <hr>
+      <h2 id="groundwork">Groundwork</h2>
+        <p>Before the real fun can begin, we need to lay a few pieces of groundwork.</p>
+      <hr>
+      <h3 id="includes">Includes</h3>
+        <p>First of all, we need to <code>#include</code> the DynASM headers:</p>
+        <pre class="diff"><span class="p">#include "luajit-2.0/dynasm/dasm_proto.h"</span>
+<span class="p">#include "luajit-2.0/dynasm/dasm_x86.h"</span></pre>
+        <p>As described in more detail on the reference page, <code><a href="reference.html#dasm_proto_h">dasm_proto.h</a></code>
+           defines the DynASM API, and <code><a href="reference.html#dasm_x86_h">dasm_x86.h</a></code> contains the implementation
+           of said API (for x86 / x64).</p>
+      <hr>
+      <h3 id="types">Types</h3>
+        <p>Next, we'll rename <code>bf_interpret</code> to <code>bf_compile</code> and change
+           its type signature:</p>
+        <pre class="diff"><span class="m">static void bf_interpret(const char* program, bf_state_t* state)</span><span class="p">static void(* bf_compile(const char* program) )(bf_state_t*)</span></pre>
+        <p>Where previously <code>bf_interpret</code> accepted both a <code>const&nbsp;char*</code>
+           and a <code>bf_state_t*</code>, <code>bf_compile</code> now accepts just the
+           <code>const&nbsp;char*</code> portion, and will return a function pointer to the JIT-compiled
+           code.</p>
+        <p>The code which calls <code>bf_interpret</code> also needs updating at this point:</p>
+        <pre class="diff"><span class="m">bf_interpret(program, &amp;state);</span><span class="p">bf_compile(program)(&amp;state);</span></pre>
+      <hr>
+      <h2 id="initialisation">Initialisation</h2>
+        <p>With the groundwork done, the next task is creating and initialising a DynASM state.</p>
+      <hr>
+      <h3 id="variables">Variables</h3>
+        <p>We'll need a variable of type <code>dasm_State*</code> to contain the DynASM state, and
+           two extra variables whose purpose will be explained later. We can also get rid of an
+           interpreter variable at the same time:</p>
+         <pre class="diff"><span class="m">int nskip = 0;</span><span class="p">dasm_State* d;</span>
+<span class="p">unsigned npc = 8;</span>
+<span class="p">unsigned nextpc = 0;</span></pre>
+      <hr>
+      <h3 id="arch">.arch</h3>
+        <p>We now reach the first of many DynASM directives, which are instructions to the DymASM
+           preprocessor. In this case, we need to instruct it as to which architecture we're
+           generating machine code for, which will either be x86 or x64:</p>
+        <pre class="diff"><span class="p">|.if X64</span>
+<span class="p">|.arch x64</span>
+<span class="p">|.else</span>
+<span class="p">|.arch x86</span>
+<span class="p">|.endif</span></pre>
+        <p>Lines starting with a vertical bar will be picked up by the DynASM preprocessor. The
+           <code><a href="reference.html#_if">.if</a></code>, <code><a href="reference.html#_else">.else</a></code>, and <code><a href="reference.html#_endif">.endif</a></code> directives will be handled
+           by DynASM's prepreprocessor, with semantics similar to C's preprocessor <code>#if</code>,
+           <code>#else</code>, and <code>#endif</code>. As a result, exactly one <code><a href="reference.html#_arch">.arch</a></code>
+           directive will take effect.</p>
+      <hr>
+      <h3 id="dasm_init">dasm_init</h3>
+        <p>Having declared a variable of type <code>dasm_State*</code>, we need to actually
+           allocate a <code>dasm_State</code> to put in it, which is done by calling <code><a href="reference.html#dasm_init">dasm_init</a></code>:</p>
+        <pre class="diff"><span class="p">|.section code</span>
+<span class="p">dasm_init(&amp;d, DASM_MAXSECTION);</span></pre>
+        <p>Note that as well as a <code>dasm_State**</code>, <code><a href="reference.html#dasm_init">dasm_init</a></code> also requires
+           an integer argument, which specifies the number of sections of machine code that'll be
+           generated. We only need one code section, so we invoke the <code><a href="reference.html#_section">.section</a></code> directive
+           with one argument, which the DynASM preprocessor will rewrite to <code>#define&nbsp;DASM_MAXSECTION&nbsp;1</code>
+           (amongst other things). This is a slightly convoluted way of passing <code>1</code> as the
+           second argument to <code><a href="reference.html#dasm_init">dasm_init</a></code>, but is a good habit in case we need more sections
+           in the future.</p>
+      <hr>
+      <h3 id="dasm_setupglobal">dasm_setupglobal</h3>
+        <p><code><a href="reference.html#dasm_init">dasm_init</a></code> will have allocated a <code>dasm_State</code>, but won't have fully
+           initialised it. A few more calls are required to fully initialise the state, the first of
+           which is <code><a href="reference.html#dasm_setupglobal">dasm_setupglobal</a></code>:</p>
+        <pre class="diff"><span class="p">|.globals lbl_</span>
+<span class="p">void* labels[lbl__MAX];</span>
+<span class="p">dasm_setupglobal(&amp;d, labels, lbl__MAX);</span></pre>
+        <p>The <code><a href="reference.html#_globals">.globals</a></code> directive with the argument <code>lbl_</code> will be rewritten by the
+           DynASM preprocessor to become an <code>enum</code> containing several things, one of which will
+           be <code>lbl__MAX</code>. This value must be passed to <code><a href="reference.html#dasm_setupglobal">dasm_setupglobal</a></code>, along with
+           an array of <code>void*</code> of equal extent. We'll make use of this <code>labels</code> array
+           much later.</p>
+      <hr>
+      <h3 id="dasm_setup">dasm_setup</h3>
+        <p>The next call in the initialisation sequence is to <code><a href="reference.html#dasm_setup">dasm_setup</a></code>:</p>
+        <pre class="diff"><span class="p">|.actionlist bf_actions</span>
+<span class="p">dasm_setup(&amp;d, bf_actions);</span></pre>
+        <p>The <code><a href="reference.html#_actionlist">.actionlist</a></code> directive with the argument <code>bf_actions</code> will be rewritten
+           by the DynASM preprocessor to become a variable called <code>bf_actions</code>, and this variable
+           must be passed to <code><a href="reference.html#dasm_setup">dasm_setup</a></code>.</p>
+      <hr>
+      <h3 id="dasm_growpc">dasm_growpc</h3>
+        <p>For a lot of use cases, the <code>dasm_State</code> would be fully initialised at this point.
+           However, as we'll be making use of dynamic labels, there is one more initialisation call to
+           make, which is to <code><a href="reference.html#dasm_growpc">dasm_growpc</a></code>:</p>
+        <pre class="diff"><span class="p">dasm_growpc(&amp;d, npc);</span></pre>
+        <p>We're passing <code>npc</code> as an argument, which is a variable we declared earlier. Said
+           variable represents the number of dynamic labels we've allocated, while the related variable
+           <code>nextpc</code> represents the number of dynamic labels we've used. These dynamic labels
+           will come into play when compiling <code>[</code> and <code>]</code>.</p>
+      <hr>
+      <h2 id="abstractions">Abstractions</h2>
+        <p>Before we start emitting machine code, it is useful to define a few abstractions. The first
+           few abstractions are to give slightly more meaningful names to the registers we'll be using:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Abstraction</th><th>Corresponding Interpreter Variable</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td><code>aState</code></td><td><code>state</code></td><td><code>ebx</code> or <code>rbx</code></td></tr>
+          <tr><td><code>aPtr</code></td><td><code>ptr</code></td><td><code>ebp</code> or <code>r12</code></td></tr>
+          <tr><td><code>aTapeBegin</code></td><td><code>tape_begin</code></td><td><code>esi</code> or <code>rsi</code> or <code>r13</code></td></tr>
+          <tr><td><code>aTapeEnd</code></td><td><code>tape_end</code></td><td><code>edi</code> or <code>rdi</code> or <code>r14</code></td></tr>
+        </tbody>
+        </table>
+        <p>The next group of useful abstractions relate to function calls:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Abstraction</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>prologue</code></td><td>Set up the stack frame, and set <code>aState</code> from the passed parameter.</td></tr>
+          <tr><td><code>prepcall1 arg1</code></td><td>Prepare to call a function with one argument, <code>arg1</code>.</td></tr>
+          <tr><td><code>prepcall2 arg1, arg2</code></td><td>Prepare to call a function with two arguments, <code>arg1</code> and <code>arg2</code>.</td></tr>
+          <tr><td><code>postcall n</code></td><td>Do cleanup after a call to a function with <code>n</code> arguments.</td></tr>
+          <tr><td><code>epilogue</code></td><td>Tear down the stack frame.</td></tr>
+        </tbody>
+        </table>
+        <p>All of these abstractions are defined by means of <code><a href="reference.html#_define">.define</a></code> (for simple substitutions) or <code><a href="reference.html#_macro">.macro</a></code> (for more
+           complex constructions), and have different definitions for each of x86, x64 POSIX, and x64 Windows:</p>
+        <pre class="diff"><span class="p">|.if X64</span>
+<span class="p">  |.define aPtr, rbx</span>
+<span class="p">  |.define aState, r12</span>
+<span class="p">  |.if WIN</span>
+<span class="p">    |.define aTapeBegin, rsi</span>
+<span class="p">    |.define aTapeEnd, rdi</span>
+<span class="p">    |.define rArg1, rcx</span>
+<span class="p">    |.define rArg2, rdx</span>
+<span class="p">  |.else</span>
+<span class="p">    |.define aTapeBegin, r13</span>
+<span class="p">    |.define aTapeEnd, r14</span>
+<span class="p">    |.define rArg1, rdi</span>
+<span class="p">    |.define rArg2, rsi</span>
+<span class="p">  |.endif</span>
+<span class="p">  |.macro prepcall1, arg1</span>
+<span class="p">    | mov rArg1, arg1</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.macro prepcall2, arg1, arg2</span>
+<span class="p">    | mov rArg1, arg1</span>
+<span class="p">    | mov rArg2, arg2</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.define postcall, .nop</span>
+<span class="p">  |.macro prologue</span>
+<span class="p">    | push aPtr</span>
+<span class="p">    | push aState</span>
+<span class="p">    | push aTapeBegin</span>
+<span class="p">    | push aTapeEnd</span>
+<span class="p">    | push rax</span>
+<span class="p">    | mov aState, rArg1</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.macro epilogue</span>
+<span class="p">    | pop rax</span>
+<span class="p">    | pop aTapeEnd</span>
+<span class="p">    | pop aTapeBegin</span>
+<span class="p">    | pop aState</span>
+<span class="p">    | pop aPtr</span>
+<span class="p">    | ret</span>
+<span class="p">  |.endmacro</span>
+<span class="p">|.else</span>
+<span class="p">  |.define aPtr, ebx</span>
+<span class="p">  |.define aState, ebp</span>
+<span class="p">  |.define aTapeBegin, esi</span>
+<span class="p">  |.define aTapeEnd, edi</span>
+<span class="p">  |.macro prepcall1, arg1</span>
+<span class="p">    | push arg1</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.macro prepcall2, arg1, arg2</span>
+<span class="p">    | push arg2</span>
+<span class="p">    | push arg1</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.macro postcall, n</span>
+<span class="p">    | add esp, 4*n</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.macro prologue</span>
+<span class="p">    | push aPtr</span>
+<span class="p">    | push aState</span>
+<span class="p">    | push aTapeBegin</span>
+<span class="p">    | push aTapeEnd</span>
+<span class="p">    | mov aState, [esp+20]</span>
+<span class="p">  |.endmacro</span>
+<span class="p">  |.macro epilogue</span>
+<span class="p">    | pop aTapeEnd</span>
+<span class="p">    | pop aTapeBegin</span>
+<span class="p">    | pop aState</span>
+<span class="p">    | pop aPtr</span>
+<span class="p">    | ret 4</span>
+<span class="p">  |.endmacro</span>
+<span class="p">|.endif</span></pre>
+        <p>Having made all of these architecture and operating system dependent definitions for the DynASM preprocessor, it
+           is useful to check that the architecture and operating system specified to the DynASM preprocessor match the architecture
+           and operating system as known by the C preprocessor, which is done by the following:</p>
+        <pre class="diff"><span class="p">||#if ((defined(_M_X64) || defined(__amd64__)) != X64) || (defined(_WIN32) != WIN)</span>
+<span class="p">#error "Wrong DynASM flags used: pass `-D X64` and/or `-D WIN` to dynasm.lua as appropriate"</span>
+<span class="p">#endif</span></pre>
+        <p>Note the line starting with two vertical bars: such lines undergo <code><a href="reference.html#_define">.define</a></code> substitution by the DynASM
+           prepreprocessor (and can particicpate in <code><a href="reference.html#_macro">.macro</a></code> definitions), but are otherwise unchanged by the DynASM
+           preprocessor. In particular, if <code>X64</code> and/or <code>WIN</code> are defined (to <code>1</code>) at DynASM prepreprocessing time,
+           then they'll be substituted for <code>1</code>. If they're not defined at DynASM prepreprocessing time, they'll be
+           left unchanged, and be substituated for <code>0</code> by the C preprocessor.</p>
+      <hr>
+      <h2 id="emitting">Emitting Code</h2>
+        <p>With all of that done, we're finally ready to emit some machine code.</p>
+      <hr>
+      <h3 id="prologue">Prologue</h3>
+        <p>The first thing we need to emit is a prologue, which replaces some of the initialisation previously done by the interpreter:</p>
+        <pre class="diff"><span class="m">unsigned char* tape_begin = state-&gt;tape - 1;</span>
+<span class="m">unsigned char* ptr = state-&gt;tape;</span>
+<span class="m">unsigned char* tape_end = state-&gt;tape + TAPE_SIZE - 1;</span><span class="p">|.type state, bf_state_t, aState</span>
+
+<span class="p">dasm_State** Dst = &amp;d;</span>
+<span class="p">|.code</span>
+<span class="p">|-&gt;bf_main:</span>
+<span class="p">| prologue</span>
+<span class="p">| mov aPtr, state-&gt;tape</span>
+<span class="p">| lea aTapeBegin, [aPtr-1]</span>
+<span class="p">| lea aTapeEnd, [aPtr+TAPE_SIZE-1]</span></pre>
+        <p>The first item of interest here is the <code><a href="reference.html#_type">.type</a></code> directive, which subsequently allows us to write <code>state-&gt;tape</code>
+           as a shorthand for <code>[aState + offsetof(bf_state_t,tape)]</code>.</p>
+        <p>The next line defines a variable called <code>Dst</code>, and initialises it to <code>&amp;d</code>. This is done because the
+           DynASM preprocessor will rewrite the subsequent lines to calls of the form <code>dasm_put(Dst, ...)</code>, and like the
+           previous calls we've made to <code>dasm_</code> functions, the first argument wants to be <code>&amp;d</code>.</p>
+        <p>The next line contains a <code class="nolink">.code</code> directive. Said directive was introduced by the prior <code>.section code</code>
+           directive, and states that subsequently emitted machine code should be placed in the <code>code</code> section (which happens
+           to be the one and only section we're working with).</p>
+        <p>After this, we define the global label <code>-&gt;bf_main</code>. After we've finished emitting machine code, we'll
+           obtain the address of this global label and turn it into a function pointer.</p>
+        <p>We then invoke the <code>prologue</code> macro as defined earlier, which will cause a few instructions to be emitted.</p>
+        <p>Finally, we have a <code>mov</code> instruction and two <code>lea</code> instructions, which directly correspond to the
+           removed interpreter code. As mentioned, the <code>state-&gt;tape</code> specified as an operand to <code>mov</code> is
+           recognised as shorthand for <code>[aState + offsetof(bf_state_t,tape)]</code>. Note that both <code>offsetof(bf_state_t,tape)</code>
+           and <code>TAPE_SIZE-1</code> (part of the <code>lea</code> operand) are so-called encoding-time constants: DynASM doesn't
+           understand what they mean, so it defers their computation to the C compiler. Both of these values happen to be compile-time
+           constants in C, but encoding-time constants don't have to be compile-time constants (we'll see examples of this in just a minute).</p>
+      <hr>
+      <h3 id="tape-movement">Tape Movement</h3>
+        <p>We've reached the guts of the interpreter now, and the first job is to replace the interpreter's handling of <code>&lt;</code> with
+           the compiler's interpretation:</p>
+        <pre class="diff"><span class="m">if(!nskip) {</span>
+<span class="m">  ptr -= n;</span>
+<span class="m">  while(ptr &lt;= tape_begin)</span>
+<span class="m">    ptr += TAPE_SIZE;</span>
+<span class="m">}</span><span class="p">| sub aPtr, n%TAPE_SIZE</span>
+<span class="p">| cmp aPtr, aTapeBegin</span>
+<span class="p">| ja &gt;1</span>
+<span class="p">| add aPtr, TAPE_SIZE</span>
+<span class="p">|1:</span></pre>
+        <p>Note that the compiler doesn't have a notion of skipping over code like the interpreter does, so the outer <code>if</code> is
+           dropped entirely. After that, <code>ptr -= n;</code> and some iterations of the subsequent loop have become <code>| sub aPtr, n%TAPE_SIZE</code>.
+           Note that <code>n%TAPE_SIZE</code> is an encoding-time constant which isn't a compile-time constant in C: DynASM still doesn't
+           understand what the operand means, but in this case the final value of the operand is computed when <code>bf_compile</code> is running.</p>
+        <p>After performing some iterations of the loop at compile time by means of <code>%TAPE_SIZE</code>, there might still be one iteration
+           to perform at runtime, which correspond to the <code>cmp</code>, <code>ja</code>, and <code>add</code> instructions. Note that
+           the syntax <code>&gt;1</code> jumps forward to the next definition of the local label <code>1</code>, which is just after the <code>add</code>
+           instruction.</p>
+        <p>A similar transformation happens for <code>&gt;</code>, but with <code>add</code> and <code>sub</code> transposed:</p>
+        <pre class="diff"><span class="m">if(!nskip) {</span>
+<span class="m">  ptr += n;</span>
+<span class="m">  while(ptr &gt; tape_end)</span>
+<span class="m">    ptr -= TAPE_SIZE;</span>
+<span class="m">}</span><span class="p">| add aPtr, n%TAPE_SIZE</span>
+<span class="p">| cmp aPtr, aTapeEnd</span>
+<span class="p">| jbe &gt;1</span>
+<span class="p">| sub aPtr, TAPE_SIZE</span>
+<span class="p">|1:</span></pre>
+      <hr>
+      <h3 id="arithmetic">Arithmetic</h3>
+        <p>The next instruction to be rewritten is <code>+</code>, which is relatively simple:</p>
+        <pre class="diff"><span class="m">if(!nskip)</span>
+<span class="m">  *ptr += n;</span><span class="p">| add byte [aPtr], n</span></pre>
+        <p>The only notable thing is the presence of the memory size specifier <code>byte</code> before the memory operand <code>[aPtr]</code>. As neither
+           the memory operand nor the immediate operand have a natural operand size, DynASM needs to be explicitly told. Note that our prior uses of
+           memory operands didn't require memory size specifiers: <code>lea</code> instructions don't require them because the memory operands aren't memory
+           accesses, and <code>mov aPtr, state-&gt;tape</code> didn't require one because the size of the memory operand was inferred to be equal to size of
+           the register operand.</p>
+        <p>The handling of <code>-</code> is similar:</p>
+        <pre class="diff"><span class="m">if(!nskip)</span>
+<span class="m">  *ptr -= n;</span><span class="p">| sub byte [aPtr], n</span></pre>
+      <hr>
+      <h3 id="io">I/O</h3>
+        <p>The next job involves the logic for <code>,</code> (read char) and <code>.</code> (write char), which are notable because they involve
+           calling other functions. The first of these is <code>,</code>:</p>
+        <pre class="diff"><span class="m">if(!nskip)</span>
+<span class="m">  *ptr = state-&gt;get_ch(state);</span><span class="p">| prepcall1 aState</span>
+<span class="p">| call aword state-&gt;get_ch</span>
+<span class="p">| postcall 1</span>
+<span class="p">| mov byte [aPtr], al</span></pre>
+        <p>Note the invocations of the <code>prepcall1</code> and <code>postcall</code> abstractions that we defined earlier. Also note that
+           <code>state-&gt;get_ch</code> is shorthand for <code>[aState + offsetof(bf_state_t,get_ch)]</code> courtesy of the earlier <code><a href="reference.html#_type">.type</a></code>
+           directive, and that memory size specifiers are still required when these shorthands are used: the size of the memory operand will
+           not be automatically inferred to be equal to the size of the named C structure member. The <code>aword</code> (address-sized word)
+           specifier refers to either 4 bytes <span class="badge">x86</span> or 8 bytes <span class="badge">x64</span>.</p>
+        <p>The transformation of <code>.</code> is similar:</p>
+        <pre class="diff"><span class="m">if(!nskip)</span>
+<span class="m">  state-&gt;put_ch(state, *ptr);</span><span class="p">| movzx r0, byte [aPtr]</span>
+<span class="p">| prepcall2 aState, r0</span>
+<span class="p">| call aword state-&gt;put_ch</span>
+<span class="p">| postcall 2</span></pre>
+        <p>Note that <code>r0</code> is used as a register operand: it refers to either <code>eax</code> <span class="badge">x86</span> or <code>rax</code> <span class="badge">x64</span>.</p>
+      <hr>
+      <h3 id="loops">Loops</h3>
+        <p>We now reach the really interesting instructions: <code>[</code> and <code>]</code>. The first of these has a rather complex transformation:</p>
+        <pre class="diff"><span class="m">loops[nloops++] = program;</span>
+<span class="m">if(!*ptr)</span>
+<span class="m">  ++nskip;</span><span class="p">if(program[0] == '-' &amp;&amp; program[1] == ']') {</span>
+<span class="p">  program += 2;</span>
+<span class="p">  | xor eax, eax</span>
+<span class="p">  | mov byte [aPtr], al</span>
+<span class="p">} else {</span>
+<span class="p">  if(nextpc == npc) {</span>
+<span class="p">    npc *= 2;</span>
+<span class="p">    dasm_growpc(&amp;d, npc);</span>
+<span class="p">  }</span>
+<span class="p">  | cmp byte [aPtr], 0</span>
+<span class="p">  | jz =&gt;nextpc+1</span>
+<span class="p">  |=&gt;nextpc:</span>
+<span class="p">  loops[nloops++] = nextpc;</span>
+<span class="p">  nextpc += 2;</span>
+<span class="p">}</span></pre>
+        <p>First of all, we now recognise the instruction sequence <code>[-]</code> and emit optimised machine code for it. Having excluded this specific case, the
+           general case requires two dynamic labels: one for jumping from <code>[</code> to after <code>]</code> (previously done by means of the <code>nskip</code>
+           variable in the interpreter), and one for jumping from <code>]</code> to after <code>[</code> (previously done by means of the <code>loops</code> stack).</p>
+        <p>If the number of dynamic labels we've used equals the number we've allocated, then we call <code><a href="reference.html#dasm_growpc">dasm_growpc</a></code> in order to allocate some more. We then
+           emit a <code>cmp</code> instruction, which does the obvious thing. If the byte at <code>[aPtr]</code> was zero, we jump to the dynamic label <code>=&gt;nextpc+1</code>
+           (which we'll subsequently define when we see <code>]</code>). After this, we define the dynamic label <code>=&gt;nextpc</code> (which is what <code>]</code> will
+           jump back to). Note that both <code>nextpc+1</code> and <code>nextpc</code> are encoding-time constants.</p>
+        <p>The second half of the magic comes from the handling of <code>]</code>:</p>
+        <pre class="diff"><span class="m">if(*ptr)</span>
+<span class="m">  program = loops[nloops-1];</span>
+<span class="m">else</span>
+<span class="m">  --nloops;</span>
+<span class="m">if(nskip)</span>
+<span class="m">  --nskip;</span><span class="p">--nloops;</span>
+<span class="p">| cmp byte [aPtr], 0</span>
+<span class="p">| jnz =&gt;loops[nloops]</span>
+<span class="p">|=&gt;loops[nloops]+1:</span></pre>
+        <p>Note the conditional jump to the dynamic label <code>=&gt;loops[nloops]</code> (which jumps to the <code>=&gt;nextpc</code> defined by the corresponding <code>[</code>),
+           and the definition of the dynamic label <code>=&gt;loops[nloops]+1</code> (which is jumped to by <code>jz =&gt;nextpc+1</code> emitted by the corresponding <code>[</code>).</p>
+      <hr>
+      <h3 id="epilogue">Epilogue</h3>
+        <p>Having covered all of the instructions, all that is left is handling the epilogue and extracting a function pointer from DynASM:</p>
+        <pre class="diff"><span class="m">return;</span><span class="p">| epilogue</span>
+<span class="p">link_and_encode(&amp;d);</span>
+<span class="p">dasm_free(&amp;d);</span>
+<span class="p">return (void(*)(bf_state_t*))labels[lbl_bf_main];</span></pre>
+        <p>The first of these lines invokes the <code>epilogue</code> macro we defined earlier. The next line calls out to <code>link_and_encode</code>, which
+           is a function we'll define in just a minute. We then call <code><a href="reference.html#dasm_free">dasm_free</a></code>, which frees the DynASM state. Finally, we take the <code>labels</code>
+           array we previously defined and passed to <code><a href="reference.html#dasm_setupglobal">dasm_setupglobal</a></code>, index it with <code>lbl_bf_main</code> (which was defined by <code>.globals lbl_</code> and corresponds
+           to the global label <code>-&gt;bf_main</code>), and cast it to a function pointer.</p>
+        <p>The <code>link_and_encode</code> function is defined as follows:</p>
+        <pre class="diff"><span class="p">#if _WIN32</span>
+<span class="p">#include &lt;Windows.h&gt;</span>
+<span class="p">#else</span>
+<span class="p">#include &lt;sys/mman.h&gt;</span>
+<span class="p">#endif</span>
+
+<span class="p">static void* link_and_encode(dasm_State** d)</span>
+<span class="p">{</span>
+<span class="p">  size_t sz;</span>
+<span class="p">  void* buf;</span>
+<span class="p">  dasm_link(d, &amp;sz);</span>
+<span class="p">#ifdef _WIN32</span>
+<span class="p">  buf = VirtualAlloc(0, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);</span>
+<span class="p">#else</span>
+<span class="p">  buf = mmap(0, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);</span>
+<span class="p">#endif</span>
+<span class="p">  dasm_encode(d, buf);</span>
+<span class="p">#ifdef _WIN32</span>
+<span class="p">  {DWORD dwOld; VirtualProtect(buf, sz, PAGE_EXECUTE_READ, &amp;dwOld); }</span>
+<span class="p">#else</span>
+<span class="p">  mprotect(buf, sz, PROT_READ | PROT_EXEC);</span>
+<span class="p">#endif</span>
+<span class="p">  return buf;</span>
+<span class="p">}</span></pre>
+        <p>The particularly interesting calls are to <code><a href="reference.html#dasm_link">dasm_link</a></code> and <code><a href="reference.html#dasm_encode">dasm_encode</a></code>. The remaining calls use operating system functionality
+           to allocate a block of read-write memory and then convert said block to read-execute. Note that we could have allocated a block of read-write-execute
+           memory, but it is generally considered bad form to have memory which is writable and executable at the same time.</p>
+      <hr>
+      <h2 id="compiling">Compiling</h2>
+        <p>If you've been following along, your <code>tutorial.c</code> should now correspond to the following:</p>
+        <pre class="listing">||#if ((defined(_M_X64) || defined(__amd64__)) != X64) || (defined(_WIN32) != WIN)
+#error "Wrong DynASM flags used: pass `-D X64` and/or `-D WIN` to dynasm.lua as appropriate"
+#endif
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include "luajit-2.0/dynasm/dasm_proto.h"
+#include "luajit-2.0/dynasm/dasm_x86.h"
+#if _WIN32
+#include &lt;Windows.h&gt;
+#else
+#include &lt;sys/mman.h&gt;
+#endif
+
+static void* link_and_encode(dasm_State** d)
+{
+  size_t sz;
+  void* buf;
+  dasm_link(d, &amp;sz);
+#ifdef _WIN32
+  buf = VirtualAlloc(0, sz, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+#else
+  buf = mmap(0, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
+  dasm_encode(d, buf);
+#ifdef _WIN32
+  {DWORD dwOld; VirtualProtect(buf, sz, PAGE_EXECUTE_READ, &amp;dwOld); }
+#else
+  mprotect(buf, sz, PROT_READ | PROT_EXEC);
+#endif
+  return buf;
+}
+
+#define TAPE_SIZE 30000
+#define MAX_NESTING 100
+
+typedef struct bf_state
+{
+  unsigned char* tape;
+  unsigned char (*get_ch)(struct bf_state*);
+  void (*put_ch)(struct bf_state*, unsigned char);
+} bf_state_t;
+
+#define bad_program(s) exit(fprintf(stderr, "bad program near %.16s: %s\n", program, s))
+
+static void(* bf_compile(const char* program) )(bf_state_t*)
+{
+  unsigned loops[MAX_NESTING];
+  int nloops = 0;
+  int n;
+  dasm_State* d;
+  unsigned npc = 8;
+  unsigned nextpc = 0;
+  |.if X64
+  |.arch x64
+  |.else
+  |.arch x86
+  |.endif
+  |.section code
+  dasm_init(&amp;d, DASM_MAXSECTION);
+  |.globals lbl_
+  void* labels[lbl__MAX];
+  dasm_setupglobal(&amp;d, labels, lbl__MAX);
+  |.actionlist bf_actions
+  dasm_setup(&amp;d, bf_actions);
+  dasm_growpc(&amp;d, npc);
+  |.if X64
+    |.define aPtr, rbx
+    |.define aState, r12
+    |.if WIN
+      |.define aTapeBegin, rsi
+      |.define aTapeEnd, rdi
+      |.define rArg1, rcx
+      |.define rArg2, rdx
+    |.else
+      |.define aTapeBegin, r13
+      |.define aTapeEnd, r14
+      |.define rArg1, rdi
+      |.define rArg2, rsi
+    |.endif
+    |.macro prepcall1, arg1
+      | mov rArg1, arg1
+    |.endmacro
+    |.macro prepcall2, arg1, arg2
+      | mov rArg1, arg1
+      | mov rArg2, arg2
+    |.endmacro
+    |.define postcall, .nop
+    |.macro prologue
+      | push aPtr
+      | push aState
+      | push aTapeBegin
+      | push aTapeEnd
+      | push rax
+      | mov aState, rArg1
+    |.endmacro
+    |.macro epilogue
+      | pop rax
+      | pop aTapeEnd
+      | pop aTapeBegin
+      | pop aState
+      | pop aPtr
+      | ret
+    |.endmacro
+  |.else
+    |.define aPtr, ebx
+    |.define aState, ebp
+    |.define aTapeBegin, esi
+    |.define aTapeEnd, edi
+    |.macro prepcall1, arg1
+      | push arg1
+    |.endmacro
+    |.macro prepcall2, arg1, arg2
+      | push arg2
+      | push arg1
+    |.endmacro
+    |.macro postcall, n
+      | add esp, 4*n
+    |.endmacro
+    |.macro prologue
+      | push aPtr
+      | push aState
+      | push aTapeBegin
+      | push aTapeEnd
+      | mov aState, [esp+20]
+    |.endmacro
+    |.macro epilogue
+      | pop aTapeEnd
+      | pop aTapeBegin
+      | pop aState
+      | pop aPtr
+      | ret 4
+    |.endmacro
+  |.endif
+
+  |.type state, bf_state_t, aState
+  
+  dasm_State** Dst = &amp;d;
+  |.code
+  |-&gt;bf_main:
+  | prologue
+  | mov aPtr, state-&gt;tape
+  | lea aTapeBegin, [aPtr-1]
+  | lea aTapeEnd, [aPtr+TAPE_SIZE-1]
+  for(;;) {
+    switch(*program++) {
+    case '&lt;':
+      for(n = 1; *program == '&lt;'; ++n, ++program);
+      | sub aPtr, n%TAPE_SIZE
+      | cmp aPtr, aTapeBegin
+      | ja &gt;1
+      | add aPtr, TAPE_SIZE
+      |1:
+      break;
+    case '&gt;':
+      for(n = 1; *program == '&gt;'; ++n, ++program);
+      | add aPtr, n%TAPE_SIZE
+      | cmp aPtr, aTapeEnd
+      | jbe &gt;1
+      | sub aPtr, TAPE_SIZE
+      |1:
+      break;
+    case '+':
+      for(n = 1; *program == '+'; ++n, ++program);
+      | add byte [aPtr], n
+      break;
+    case '-':
+      for(n = 1; *program == '-'; ++n, ++program);
+      | sub byte [aPtr], n
+      break;
+    case ',':
+      | prepcall1 aState
+      | call aword state-&gt;get_ch
+      | postcall 1
+      | mov byte [aPtr], al
+      break;
+    case '.':
+      | movzx r0, byte [aPtr]
+      | prepcall2 aState, r0
+      | call aword state-&gt;put_ch
+      | postcall 2
+      break;
+    case '[':
+      if(nloops == MAX_NESTING)
+        bad_program("Nesting too deep");
+      if(program[0] == '-' &amp;&amp; program[1] == ']') {
+        program += 2;
+        | xor eax, eax
+        | mov byte [aPtr], al
+      } else {
+        if(nextpc == npc) {
+          npc *= 2;
+          dasm_growpc(&amp;d, npc);
+        }
+        | cmp byte [aPtr], 0
+        | jz =&gt;nextpc+1
+        |=&gt;nextpc:
+        loops[nloops++] = nextpc;
+        nextpc += 2;
+      }
+      break;
+    case ']':
+      if(nloops == 0)
+        bad_program("] without matching [");
+      --nloops;
+      | cmp byte [aPtr], 0
+      | jnz =&gt;loops[nloops]
+      |=&gt;loops[nloops]+1:
+      break;
+    case 0:
+      if(nloops != 0)
+        program = "&lt;EOF&gt;", bad_program("[ without matching ]");
+      | epilogue
+      link_and_encode(&amp;d);
+      dasm_free(&amp;d);
+      return (void(*)(bf_state_t*))labels[lbl_bf_main];
+    }
+  }
+}
+
+static void bf_putchar(bf_state_t* s, unsigned char c)
+{
+  putchar((int)c);
+}
+
+static unsigned char bf_getchar(bf_state_t* s)
+{
+  return (unsigned char)getchar();
+}
+
+static void bf_run(const char* program)
+{
+  bf_state_t state;
+  unsigned char tape[TAPE_SIZE] = {0};
+  state.tape = tape;
+  state.get_ch = bf_getchar;
+  state.put_ch = bf_putchar;
+  bf_compile(program)(&amp;state);
+}
+
+int main(int argc, char** argv)
+{
+  if(argc == 2) {
+    long sz;
+    char* program;
+    FILE* f = fopen(argv[1], "r");
+    if(!f) {
+      fprintf(stderr, "Cannot open %s\n", argv[1]);
+      return 1;
+    }
+    fseek(f, 0, SEEK_END);
+    sz = ftell(f);
+    program = (char*)malloc(sz + 1);
+    fseek(f, 0, SEEK_SET);
+    program[fread(program, 1, sz, f)] = 0;
+    fclose(f);
+    bf_run(program);
+    return 0;
+  } else {
+    fprintf(stderr, "Usage: %s INFILE.bf\n", argv[0]);
+    return 1;
+  }
+}</pre>
+        <p>If you've not been following that closely, you can reach the same state by doing:</p>
+        <pre><span class="c">git clone https://github.com/corsix/dynasm-doc.git</span>
+<span class="c">cd dynasm-doc</span>
+<span class="c">git submodule update --init</span>
+<span class="c">cp bf_dynasm.c tutorial.c</span></pre>
+        <p>In order to compile <code>tutorial.c</code>, we first need to run it through the DynASM preprocessor. Said preprocessor is written in Lua, so we'll
+           first compile a minimal Lua interpreter:</p>
+        <pre><span class="c">gcc -o minilua luajit-2.0/src/host/minilua.c</span></pre>
+        <p>With this interpreter in place, we can run the DynASM preprocessor:</p>
+        <pre><span class="c">./minilua luajit-2.0/dynasm/dynasm.lua -o tutorial.posix64.c -D X64 tutorial.c</span></pre>
+        <p>With preprocessing done, we can now invoke a C compiler:</p>
+        <pre><span class="c">gcc -o tutorial tutorial.posix64.c</span></pre>
+        <p>We can then run the resulting executable, which should fairly quickly render the Mandelbrot set:</p>
+        <pre><span class="c">./tutorial mandelbrot.bf</span></pre>
+      </div>
+      <div class="col-md-3">
+        <div class="sidenav hidden-print" role="complementary">
+          <ul class="nav">
+                        <li>
+              <a href="#introduction">Introduction</a>
+            </li>
+            <li>
+              <a href="#groundwork">Groundwork</a>
+              <ul class="nav">
+                <li><a href="#includes">Includes</a></li>
+                <li><a href="#types">Types</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#initialisation">Initialisation</a>
+              <ul class="nav">
+                <li><a href="#variables">Variables</a></li>
+                <li><a href="#arch">.arch</a></li>
+                <li><a href="#dasm_init">dasm_init</a></li>
+                <li><a href="#dasm_setupglobal">dasm_setupglobal</a></li>
+                <li><a href="#dasm_setup">dasm_setup</a></li>
+                <li><a href="#dasm_growpc">dasm_growpc</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#abstractions">Abstractions</a>
+            </li>
+            <li>
+              <a href="#emitting">Emitting Code</a>
+              <ul class="nav">
+                <li><a href="#prologue">Prologue</a></li>
+                <li><a href="#tape-movement">Tape Movement</a></li>
+                <li><a href="#arithmetic">Arithmetic</a></li>
+                <li><a href="#io">I/O</a></li>
+                <li><a href="#loops">Loops</a></li>
+                <li><a href="#epilogue">Epilogue</a></li>
+              </ul>
+            </li>
+            <li>
+              <a href="#compiling">Compiling</a>
+            </li>
+            <li class="top"><a href="#top">Back to top</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="footer">
+      <a href="http://luajit.org/dynasm.html">DynASM</a> is free software developed by <a href="http://luajit.org/contact.html">Mike Pall</a>, released under the <a href="http://www.opensource.org/licenses/mit-license.php">MIT license</a>.<br>
+      This documentation is authored by <a href="https://github.com/corsix">Peter Cawley</a>, and is released as <a rel="license" href="http://creativecommons.org/licenses/by/3.0/">CC BY 3.0</a>.
+    </div>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/dynasm-doc.js"></script>
+  </body>
+</html>

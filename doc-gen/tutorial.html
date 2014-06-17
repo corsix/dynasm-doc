@@ -1,0 +1,253 @@
+      <h2 id="introduction">Introduction</h2>
+        <p>The starting point of this tutorial is the following <a href="http://en.wikipedia.org/wiki/Brainfsck">brainfsck</a> interpreter:</p>
+        <pre class="listing">bf_c</pre>
+        <p>Over the course of this tutorial, we'll use DynASM to transform this interpreter
+           into a brainfsck JIT compiler, therein hopefully making it faster.</p>
+        <p>To follow along, clone this repository and start from <code>bf_c.c</code>:</p>
+        <pre>$ git clone GITHUB_CLONE_URL
+$ cd dynasm-doc
+$ git submodule update --init
+$ cp bf_c.c tutorial.c</pre>
+        <p>The functionality of the starting point can be checked by running the following,
+           which should very slowly render the Mandelbrot set:</p>
+        <pre>$ gcc -o tutorial tutorial.c
+$ ./tutorial mandelbrot.bf</pre>
+      <hr>
+      <h2 id="groundwork">Groundwork</h2>
+        <p>Before the real fun can begin, we need to lay a few pieces of groundwork.</p>
+      <hr>
+      <h3 id="includes">Includes</h3>
+        <p>First of all, we need to <code>#include</code> the DynASM headers:</p>
+        <pre class="diff">+dynasm_includes</pre>
+        <p>As described in more detail on the reference page, <code>dasm_proto.h</code>
+           defines the DynASM API, and <code>dasm_x86.h</code> contains the implementation
+           of said API (for x86 / x64).</p>
+      <hr>
+      <h3 id="types">Types</h3>
+        <p>Next, we'll rename <code>bf_interpret</code> to <code>bf_compile</code> and change
+           its type signature:</p>
+        <pre class="diff">-bf_interpret_decl
++bf_compile_decl</pre>
+        <p>Where previously <code>bf_interpret</code> accepted both a <code>const&nbsp;char*</code>
+           and a <code>bf_state_t*</code>, <code>bf_compile</code> now accepts just the
+           <code>const&nbsp;char*</code> portion, and will return a function pointer to the JIT-compiled
+           code.</p>
+        <p>The code which calls <code>bf_interpret</code> also needs updating at this point:</p>
+        <pre class="diff">-call_bf_interpret
++call_bf_compile</pre>
+      <hr>
+      <h2 id="initialisation">Initialisation</h2>
+        <p>With the groundwork done, the next task is creating and initialising a DynASM state.</p>
+      <hr>
+      <h3 id="variables">Variables</h3>
+        <p>We'll need a variable of type <code>dasm_State*</code> to contain the DynASM state, and
+           two extra variables whose purpose will be explained later. We can also get rid of an
+           interpreter variable at the same time:</p>
+         <pre class="diff">-bf_interpret_vars
++bf_compile_vars</pre>
+      <hr>
+      <h3 id="arch">.arch</h3>
+        <p>We now reach the first of many DynASM directives, which are instructions to the DymASM
+           preprocessor. In this case, we need to instruct it as to which architecture we're
+           generating machine code for, which will either be x86 or x64:</p>
+        <pre class="diff">+arch</pre>
+        <p>Lines starting with a vertical bar will be picked up by the DynASM preprocessor. The
+           <code>.if</code>, <code>.else</code>, and <code>.endif</code> directives will be handled
+           by DynASM's prepreprocessor, with semantics similar to C's preprocessor <code>#if</code>,
+           <code>#else</code>, and <code>#endif</code>. As a result, exactly one <code>.arch</code>
+           directive will take effect.</p>
+      <hr>
+      <h3 id="dasm_init">dasm_init</h3>
+        <p>Having declared a variable of type <code>dasm_State*</code>, we need to actually
+           allocate a <code>dasm_State</code> to put in it, which is done by calling <code>dasm_init</code>:</p>
+        <pre class="diff">+dasm_init</pre>
+        <p>Note that as well as a <code>dasm_State**</code>, <code>dasm_init</code> also requires
+           an integer argument, which specifies the number of sections of machine code that'll be
+           generated. We only need one code section, so we invoke the <code>.section</code> directive
+           with one argument, which the DynASM preprocessor will rewrite to <code>#define&nbsp;DASM_MAXSECTION&nbsp;1</code>
+           (amongst other things). This is a slightly convoluted way of passing <code>1</code> as the
+           second argument to <code>dasm_init</code>, but is a good habit in case we need more sections
+           in the future.</p>
+      <hr>
+      <h3 id="dasm_setupglobal">dasm_setupglobal</h3>
+        <p><code>dasm_init</code> will have allocated a <code>dasm_State</code>, but won't have fully
+           initialised it. A few more calls are required to fully initialise the state, the first of
+           which is <code>dasm_setupglobal</code>:</p>
+        <pre class="diff">+dasm_setupglobal</pre>
+        <p>The <code>.globals</code> directive with the argument <code>lbl_</code> will be rewritten by the
+           DynASM preprocessor to become an <code>enum</code> containing several things, one of which will
+           be <code>lbl__MAX</code>. This value must be passed to <code>dasm_setupglobal</code>, along with
+           an array of <code>void*</code> of equal extent. We'll make use of this <code>labels</code> array
+           much later.</p>
+      <hr>
+      <h3 id="dasm_setup">dasm_setup</h3>
+        <p>The next call in the initialisation sequence is to <code>dasm_setup</code>:</p>
+        <pre class="diff">+dasm_setup</pre>
+        <p>The <code>.actionlist</code> directive with the argument <code>bf_actions</code> will be rewritten
+           by the DynASM preprocessor to become a variable called <code>bf_actions</code>, and this variable
+           must be passed to <code>dasm_setup</code>.</p>
+      <hr>
+      <h3 id="dasm_growpc">dasm_growpc</h3>
+        <p>For a lot of use cases, the <code>dasm_State</code> would be fully initialised at this point.
+           However, as we'll be making use of dynamic labels, there is one more initialisation call to
+           make, which is to <code>dasm_growpc</code>:</p>
+        <pre class="diff">+dasm_growpc</pre>
+        <p>We're passing <code>npc</code> as an argument, which is a variable we declared earlier. Said
+           variable represents the number of dynamic labels we've allocated, while the related variable
+           <code>nextpc</code> represents the number of dynamic labels we've used. These dynamic labels
+           will come into play when compiling <code>[</code> and <code>]</code>.</p>
+      <hr>
+      <h2 id="abstractions">Abstractions</h2>
+        <p>Before we start emitting machine code, it is useful to define a few abstractions. The first
+           few abstractions are to give slightly more meaningful names to the registers we'll be using:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Abstraction</th><th>Corresponding Interpreter Variable</th><th>Definition</th></tr></thead>
+        <tbody>
+          <tr><td><code>aState</code></td><td><code>state</code></td><td><code>ebx</code> or <code>rbx</code></td></tr>
+          <tr><td><code>aPtr</code></td><td><code>ptr</code></td><td><code>ebp</code> or <code>r12</code></td></tr>
+          <tr><td><code>aTapeBegin</code></td><td><code>tape_begin</code></td><td><code>esi</code> or <code>rsi</code> or <code>r13</code></td></tr>
+          <tr><td><code>aTapeEnd</code></td><td><code>tape_end</code></td><td><code>edi</code> or <code>rdi</code> or <code>r14</code></td></tr>
+        </tbody>
+        </table>
+        <p>The next group of useful abstractions relate to function calls:</p>
+        <table class="table table-striped">
+        <thead><tr><th>Abstraction</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>prologue</code></td><td>Set up the stack frame, and set <code>aState</code> from the passed parameter.</td></tr>
+          <tr><td><code>prepcall1 arg1</code></td><td>Prepare to call a function with one argument, <code>arg1</code>.</td></tr>
+          <tr><td><code>prepcall2 arg1, arg2</code></td><td>Prepare to call a function with two arguments, <code>arg1</code> and <code>arg2</code>.</td></tr>
+          <tr><td><code>postcall n</code></td><td>Do cleanup after a call to a function with <code>n</code> arguments.</td></tr>
+          <tr><td><code>epilogue</code></td><td>Tear down the stack frame.</td></tr>
+        </tbody>
+        </table>
+        <p>All of these abstractions are defined by means of <code>.define</code> (for simple substitutions) or <code>.macro</code> (for more
+           complex constructions), and have different definitions for each of x86, x64 POSIX, and x64 Windows:</p>
+        <pre class="diff">+arch_defines</pre>
+        <p>Having made all of these architecture and operating system dependent definitions for the DynASM preprocessor, it
+           is useful to check that the architecture and operating system specified to the DynASM preprocessor match the architecture
+           and operating system as known by the C preprocessor, which is done by the following:</p>
+        <pre class="diff">+preproc_consistency</pre>
+        <p>Note the line starting with two vertical bars: such lines undergo <code>.define</code> substitution by the DynASM
+           prepreprocessor (and can particicpate in <code>.macro</code> definitions), but are otherwise unchanged by the DynASM
+           preprocessor. In particular, if <code>X64</code> and/or <code>WIN</code> are defined (to <code>1</code>) at DynASM prepreprocessing time,
+           then they'll be substituted for <code>1</code>. If they're not defined at DynASM prepreprocessing time, they'll be
+           left unchanged, and be substituated for <code>0</code> by the C preprocessor.</p>
+      <hr>
+      <h2 id="emitting">Emitting Code</h2>
+        <p>With all of that done, we're finally ready to emit some machine code.</p>
+      <hr>
+      <h3 id="prologue">Prologue</h3>
+        <p>The first thing we need to emit is a prologue, which replaces some of the initialisation previously done by the interpreter:</p>
+        <pre class="diff">-bf_interpret_state_init
++bf_compile_state_init</pre>
+        <p>The first item of interest here is the <code>.type</code> directive, which subsequently allows us to write <code>state-&gt;tape</code>
+           as a shorthand for <code>[aState + offsetof(bf_state_t,tape)]</code>.</p>
+        <p>The next line defines a variable called <code>Dst</code>, and initialises it to <code>&amp;d</code>. This is done because the
+           DynASM preprocessor will rewrite the subsequent lines to calls of the form <code>dasm_put(Dst, ...)</code>, and like the
+           previous calls we've made to <code>dasm_</code> functions, the first argument wants to be <code>&amp;d</code>.</p>
+        <p>The next line contains a <code class="nolink">.code</code> directive. Said directive was introduced by the prior <code>.section code</code>
+           directive, and states that subsequently emitted machine code should be placed in the <code>code</code> section (which happens
+           to be the one and only section we're working with).</p>
+        <p>After this, we define the global label <code>-&gt;bf_main</code>. After we've finished emitting machine code, we'll
+           obtain the address of this global label and turn it into a function pointer.</p>
+        <p>We then invoke the <code>prologue</code> macro as defined earlier, which will cause a few instructions to be emitted.</p>
+        <p>Finally, we have a <code>mov</code> instruction and two <code>lea</code> instructions, which directly correspond to the
+           removed interpreter code. As mentioned, the <code>state-&gt;tape</code> specified as an operand to <code>mov</code> is
+           recognised as shorthand for <code>[aState + offsetof(bf_state_t,tape)]</code>. Note that both <code>offsetof(bf_state_t,tape)</code>
+           and <code>TAPE_SIZE-1</code> (part of the <code>lea</code> operand) are so-called encoding-time constants: DynASM doesn't
+           understand what they mean, so it defers their computation to the C compiler. Both of these values happen to be compile-time
+           constants in C, but encoding-time constants don't have to be compile-time constants (we'll see examples of this in just a minute).</p>
+      <hr>
+      <h3 id="tape-movement">Tape Movement</h3>
+        <p>We've reached the guts of the interpreter now, and the first job is to replace the interpreter's handling of <code>&lt;</code> with
+           the compiler's interpretation:</p>
+        <pre class="diff">-bf_interpret_prev
++bf_compile_prev</pre>
+        <p>Note that the compiler doesn't have a notion of skipping over code like the interpreter does, so the outer <code>if</code> is
+           dropped entirely. After that, <code>ptr -= n;</code> and some iterations of the subsequent loop have become <code>| sub aPtr, n%TAPE_SIZE</code>.
+           Note that <code>n%TAPE_SIZE</code> is an encoding-time constant which isn't a compile-time constant in C: DynASM still doesn't
+           understand what the operand means, but in this case the final value of the operand is computed when <code>bf_compile</code> is running.</p>
+        <p>After performing some iterations of the loop at compile time by means of <code>%TAPE_SIZE</code>, there might still be one iteration
+           to perform at runtime, which correspond to the <code>cmp</code>, <code>ja</code>, and <code>add</code> instructions. Note that
+           the syntax <code>&gt;1</code> jumps forward to the next definition of the local label <code>1</code>, which is just after the <code>add</code>
+           instruction.</p>
+        <p>A similar transformation happens for <code>&gt;</code>, but with <code>add</code> and <code>sub</code> transposed:</p>
+        <pre class="diff">-bf_interpret_next
++bf_compile_next</pre>
+      <hr>
+      <h3 id="arithmetic">Arithmetic</h3>
+        <p>The next instruction to be rewritten is <code>+</code>, which is relatively simple:</p>
+        <pre class="diff">-bf_interpret_inc
++bf_compile_inc</pre>
+        <p>The only notable thing is the presence of the memory size specifier <code>byte</code> before the memory operand <code>[aPtr]</code>. As neither
+           the memory operand nor the immediate operand have a natural operand size, DynASM needs to be explicitly told. Note that our prior uses of
+           memory operands didn't require memory size specifiers: <code>lea</code> instructions don't require them because the memory operands aren't memory
+           accesses, and <code>mov aPtr, state-&gt;tape</code> didn't require one because the size of the memory operand was inferred to be equal to size of
+           the register operand.</p>
+        <p>The handling of <code>-</code> is similar:</p>
+        <pre class="diff">-bf_interpret_dec
++bf_compile_dec</pre>
+      <hr>
+      <h3 id="io">I/O</h3>
+        <p>The next job involves the logic for <code>,</code> (read char) and <code>.</code> (write char), which are notable because they involve
+           calling other functions. The first of these is <code>,</code>:</p>
+        <pre class="diff">-bf_interpret_get
++bf_compile_get</pre>
+        <p>Note the invocations of the <code>prepcall1</code> and <code>postcall</code> abstractions that we defined earlier. Also note that
+           <code>state-&gt;get_ch</code> is shorthand for <code>[aState + offsetof(bf_state_t,get_ch)]</code> courtesy of the earlier <code>.type</code>
+           directive, and that memory size specifiers are still required when these shorthands are used: the size of the memory operand will
+           not be automatically inferred to be equal to the size of the named C structure member. The <code>aword</code> (address-sized word)
+           specifier refers to either 4 bytes <span class="badge">x86</span> or 8 bytes <span class="badge">x64</span>.</p>
+        <p>The transformation of <code>.</code> is similar:</p>
+        <pre class="diff">-bf_interpret_put
++bf_compile_put</pre>
+        <p>Note that <code>r0</code> is used as a register operand: it refers to either <code>eax</code> <span class="badge">x86</span> or <code>rax</code> <span class="badge">x64</span>.</p>
+      <hr>
+      <h3 id="loops">Loops</h3>
+        <p>We now reach the really interesting instructions: <code>[</code> and <code>]</code>. The first of these has a rather complex transformation:</p>
+        <pre class="diff">-bf_interpret_bra
++bf_compile_bra</pre>
+        <p>First of all, we now recognise the instruction sequence <code>[-]</code> and emit optimised machine code for it. Having excluded this specific case, the
+           general case requires two dynamic labels: one for jumping from <code>[</code> to after <code>]</code> (previously done by means of the <code>nskip</code>
+           variable in the interpreter), and one for jumping from <code>]</code> to after <code>[</code> (previously done by means of the <code>loops</code> stack).</p>
+        <p>If the number of dynamic labels we've used equals the number we've allocated, then we call <code>dasm_growpc</code> in order to allocate some more. We then
+           emit a <code>cmp</code> instruction, which does the obvious thing. If the byte at <code>[aPtr]</code> was zero, we jump to the dynamic label <code>=&gt;nextpc+1</code>
+           (which we'll subsequently define when we see <code>]</code>). After this, we define the dynamic label <code>=&gt;nextpc</code> (which is what <code>]</code> will
+           jump back to). Note that both <code>nextpc+1</code> and <code>nextpc</code> are encoding-time constants.</p>
+        <p>The second half of the magic comes from the handling of <code>]</code>:</p>
+        <pre class="diff">-bf_interpret_ket
++bf_compile_ket</pre>
+        <p>Note the conditional jump to the dynamic label <code>=&gt;loops[nloops]</code> (which jumps to the <code>=&gt;nextpc</code> defined by the corresponding <code>[</code>),
+           and the definition of the dynamic label <code>=&gt;loops[nloops]+1</code> (which is jumped to by <code>jz =&gt;nextpc+1</code> emitted by the corresponding <code>[</code>).</p>
+      <hr>
+      <h3 id="epilogue">Epilogue</h3>
+        <p>Having covered all of the instructions, all that is left is handling the epilogue and extracting a function pointer from DynASM:</p>
+        <pre class="diff">-bf_interpret_finish
++bf_compile_finish</pre>
+        <p>The first of these lines invokes the <code>epilogue</code> macro we defined earlier. The next line calls out to <code>link_and_encode</code>, which
+           is a function we'll define in just a minute. We then call <code>dasm_free</code>, which frees the DynASM state. Finally, we take the <code>labels</code>
+           array we previously defined and passed to <code>dasm_setupglobal</code>, index it with <code>lbl_bf_main</code> (which was defined by <code>.globals lbl_</code> and corresponds
+           to the global label <code>-&gt;bf_main</code>), and cast it to a function pointer.</p>
+        <p>The <code>link_and_encode</code> function is defined as follows:</p>
+        <pre class="diff">+link_and_encode</pre>
+        <p>The particularly interesting calls are to <code>dasm_link</code> and <code>dasm_encode</code>. The remaining calls use operating system functionality
+           to allocate a block of read-write memory and then convert said block to read-execute. Note that we could have allocated a block of read-write-execute
+           memory, but it is generally considered bad form to have memory which is writable and executable at the same time.</p>
+      <hr>
+      <h2 id="compiling">Compiling</h2>
+        <p>If you've been following along, your <code>tutorial.c</code> should now correspond to the following:</p>
+        <pre class="listing">bf_dynasm</pre>
+        <p>If you've not been following that closely, you can reach the same state by doing:</p>
+        <pre>$ git clone GITHUB_CLONE_URL
+$ cd dynasm-doc
+$ git submodule update --init
+$ cp bf_dynasm.c tutorial.c</pre>
+        <p>In order to compile <code>tutorial.c</code>, we first need to run it through the DynASM preprocessor. Said preprocessor is written in Lua, so we'll
+           first compile a minimal Lua interpreter:</p>
+        <pre>$ gcc -o minilua luajit-2.0/src/host/minilua.c</pre>
+        <p>With this interpreter in place, we can run the DynASM preprocessor:</p>
+        <pre>$ ./minilua luajit-2.0/dynasm/dynasm.lua -o tutorial.posix64.c -D X64 tutorial.c</pre>
+        <p>With preprocessing done, we can now invoke a C compiler:</p>
+        <pre>$ gcc -o tutorial tutorial.posix64.c</pre>
+        <p>We can then run the resulting executable, which should fairly quickly render the Mandelbrot set:</p>
+        <pre>$ ./tutorial mandelbrot.bf</pre>

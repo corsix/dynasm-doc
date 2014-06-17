@@ -1,0 +1,16 @@
+        <div class="jumbotron">
+          <p>DynASM is a preprocessor and tiny runtime library for creating assemblers and JIT compilers in C or C++.</p>
+        </div>
+        <p>DynASM was written for, and is maintained as part of, <a href="http://luajit.org/">LuaJIT</a>. LuaJIT 1 used
+           DynASM in a JIT role. LuaJIT 2 doesn't use DymASM in a JIT role, but LuaJIT 2's interpreter is hand-written in assembly,
+           and it uses DynASM as a powerful cross-platform assembler.</p>
+        <p>To get the latest copy of DymASM, run the following:</p>
+        <pre>$ git clone http://luajit.org/git/luajit-2.0.git
+$ cd luajit-2.0/dynasm</pre>
+        <p>The <a href="http://luajit.org/dynasm.html">official documentation</a> for DynASM is extremely spartan, which can
+           make it difficult to get started with DynASM. For using DynASM in a JIT role, this unofficial documentation's
+           <strong><a href="tutorial.html">tutorial</a></strong> is recommended as a starting point. Once you're more familiar with DynASM,
+           the <strong><a href="reference.html">reference</a></strong> and <strong><a href="instructions.html">instruction listing</a></strong>
+           pages are recommended reading for fleshing out your DynASM knowledge.</p>
+        <p>Note that DynASM supports the x86, x64, ARM, PowerPC, and MIPS instruction sets, but this unofficial documentation
+           only covers x86 and x64.</p>

@@ -15,6 +15,9 @@
 #include <Windows.h>
 #else
 #include <sys/mman.h>
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 #endif
 
 static void* link_and_encode(dasm_State** d)

@@ -520,6 +520,9 @@ int main(int argc, char** argv)
 <span class="p">#include &lt;Windows.h&gt;</span>
 <span class="p">#else</span>
 <span class="p">#include &lt;sys/mman.h&gt;</span>
+<span class="p">#if !defined(MAP_ANONYMOUS) &amp;&amp; defined(MAP_ANON)</span>
+<span class="p">#define MAP_ANONYMOUS MAP_ANON</span>
+<span class="p">#endif</span>
 <span class="p">#endif</span>
 
 <span class="p">static void* link_and_encode(dasm_State** d)</span>
@@ -557,6 +560,9 @@ int main(int argc, char** argv)
 #include &lt;Windows.h&gt;
 #else
 #include &lt;sys/mman.h&gt;
+#if !defined(MAP_ANONYMOUS) &amp;&amp; defined(MAP_ANON)
+#define MAP_ANONYMOUS MAP_ANON
+#endif
 #endif
 
 static void* link_and_encode(dasm_State** d)

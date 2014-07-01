@@ -146,11 +146,10 @@ void a(Dst_DECL) {
         <hr>
         <h3 id="memory64">Memory (<code>mov64</code>)</h3>
         <p>The special <span class="badge">x64</span> instruction <code><a href="#mov64_2">mov64</a></code> accepts the
-           following memory forms <strong>instead of</strong> the usual forms:</p>
+           following memory form <strong>instead of</strong> the usual forms:</p>
         <table class="table table-striped">
         <thead><tr><th>Form</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>[&amp;<em>expr</em>]</code></td><td>Access <code>(ptrdiff_t)(<em>expr</em>)</code>, as computed when <code>dasm_put</code> is called.</td></tr>
           <tr><td><code>[imm64]</code></td><td>Like <code>[imm32]</code>, except not limited to the low 2GB of address space.</td></tr>
         </tbody>
         </table>

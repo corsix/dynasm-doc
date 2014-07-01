@@ -3,7 +3,7 @@ local rootdir = "./"
 do
   local arg = arg
   if arg and arg[0] then
-    prefix = arg[0]:match"^(.*[/\\])"
+    prefix = arg[0]:match"^(.*[/\\])" or ""
     if prefix then
       rootdir = prefix
       if package then

@@ -1444,10 +1444,14 @@ void a(Dst_DECL) {
 | vandps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vandps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vandps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a></pre>
-<pre id="vblendpd_4">| vblendpd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vblendpd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vblendps_4">| vblendps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vblendps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vblendpd_4">| vblendpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vblendpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vblendpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vblendpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vblendps_4">| vblendps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vblendps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vblendps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vblendps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vblendvpd_4">| vblendvpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vblendvpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#registers">xmm</a>
 | vblendvpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -1464,10 +1468,14 @@ void a(Dst_DECL) {
 | vbroadcastss <a href="#registers">ymm</a>, dword <a href="#memory">m32</a>
 | vbroadcastss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vbroadcastss <a href="#registers">ymm</a>, <a href="#registers">xmm</a></pre>
-<pre id="vcmppd_4">| vcmppd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vcmppd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vcmpps_4">| vcmpps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vcmpps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vcmppd_4">| vcmppd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vcmppd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vcmppd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vcmppd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vcmpps_4">| vcmpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vcmpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vcmpps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vcmpps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vcmpsd_4">| vcmpsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
 | vcmpsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vcmpss_4">| vcmpss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
@@ -1550,8 +1558,10 @@ void a(Dst_DECL) {
 | vdivss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
 <pre id="vdppd_4">| vdppd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
 | vdppd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vdpps_4">| vdpps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vdpps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vdpps_4">| vdpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vdpps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vdpps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vdpps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vextractf128_3">| vextractf128 <a href="#registers">xmm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
 | vextractf128 oword <a href="#memory">m128</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vextracti128_3">| vextracti128 <a href="#registers">xmm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
@@ -1703,8 +1713,10 @@ void a(Dst_DECL) {
 | vmovups <a href="#registers">ymm</a>, <a href="#memory">m256</a>
 | vmovups <a href="#memory">m128</a>, <a href="#registers">xmm</a>
 | vmovups <a href="#memory">m256</a>, <a href="#registers">ymm</a></pre>
-<pre id="vmpsadbw_4">| vmpsadbw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vmpsadbw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vmpsadbw_4">| vmpsadbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vmpsadbw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vmpsadbw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vmpsadbw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vmulpd_3">| vmulpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vmulpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vmulpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -1785,8 +1797,10 @@ void a(Dst_DECL) {
 | vpaddw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpaddw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpaddw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a></pre>
-<pre id="vpalignr_4">| vpalignr <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpalignr <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpalignr_4">| vpalignr <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpalignr <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpalignr <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpalignr <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpand_3">| vpand <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpand <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpand <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -1803,14 +1817,18 @@ void a(Dst_DECL) {
 | vpavgw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpavgw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpavgw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a></pre>
-<pre id="vpblendd_4">| vpblendd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpblendd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpblendd_4">| vpblendd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpblendd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpblendd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpblendd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpblendvb_4">| vpblendvb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpblendvb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#registers">xmm</a>
 | vpblendvb <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpblendvb <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#registers">ymm</a></pre>
-<pre id="vpblendw_4">| vpblendw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpblendw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpblendw_4">| vpblendw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpblendw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpblendw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpblendw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpbroadcastb_2">| vpbroadcastb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpbroadcastb <a href="#registers">xmm</a>, byte <a href="#memory">m8</a>
 | vpbroadcastb <a href="#registers">ymm</a>, <a href="#registers">xmm</a>
@@ -1879,14 +1897,18 @@ void a(Dst_DECL) {
 | vpermilpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpermilpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpermilpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpermilpd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpermilpd <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+| vpermilpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpermilpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpermilpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpermilpd <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpermilps_3">| vpermilps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpermilps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpermilps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpermilps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpermilps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpermilps <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+| vpermilps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpermilps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpermilps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpermilps <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpermpd_3">| vpermpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
 | vpermpd <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpermps_3">| vpermps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -2090,12 +2112,18 @@ void a(Dst_DECL) {
 | vpshufb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpshufb <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpshufb <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a></pre>
-<pre id="vpshufd_3">| vpshufd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpshufd <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vpshufhw_3">| vpshufhw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpshufhw <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vpshuflw_3">| vpshuflw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vpshuflw <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpshufd_3">| vpshufd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpshufd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpshufd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpshufd <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpshufhw_3">| vpshufhw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpshufhw <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpshufhw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpshufhw <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpshuflw_3">| vpshuflw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpshuflw <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vpshuflw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vpshuflw <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsignb_3">| vpsignb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsignb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsignb <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -2112,13 +2140,16 @@ void a(Dst_DECL) {
 | vpslld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpslld <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpslld <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpslld <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vpslldq_3">| vpslldq <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpslld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpslld <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpslldq_3">| vpslldq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpslldq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsllq_3">| vpsllq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsllq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsllq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsllq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsllq <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsllq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsllq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsllvd_3">| vpsllvd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsllvd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsllvd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -2131,12 +2162,14 @@ void a(Dst_DECL) {
 | vpsllw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsllw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsllw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsllw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsllw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsllw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsrad_3">| vpsrad <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsrad <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsrad <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsrad <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsrad <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsrad <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsrad <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsravd_3">| vpsravd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsravd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsravd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -2145,18 +2178,22 @@ void a(Dst_DECL) {
 | vpsraw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsraw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsraw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsraw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsraw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsraw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsrld_3">| vpsrld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsrld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsrld <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsrld <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsrld <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vpsrldq_3">| vpsrldq <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsrld <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsrld <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vpsrldq_3">| vpsrldq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsrldq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsrlq_3">| vpsrlq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsrlq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsrlq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsrlq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsrlq <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsrlq <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsrlq <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsrlvd_3">| vpsrlvd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsrlvd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsrlvd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -2169,7 +2206,8 @@ void a(Dst_DECL) {
 | vpsrlw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsrlw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
 | vpsrlw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>
-| vpsrlw <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a></pre>
+| vpsrlw <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vpsrlw <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vpsubb_3">| vpsubb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vpsubb <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vpsubb <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>
@@ -2256,10 +2294,14 @@ void a(Dst_DECL) {
 | vrcpps <a href="#registers">ymm</a>, <a href="#memory">m256</a></pre>
 <pre id="vrcpss_3">| vrcpss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vrcpss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
-<pre id="vroundpd_3">| vroundpd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vroundpd <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vroundps_3">| vroundps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vroundps <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vroundpd_3">| vroundpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vroundpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vroundpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vroundpd <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vroundps_3">| vroundps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vroundps <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vroundps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vroundps <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vroundsd_4">| vroundsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
 | vroundsd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, qword <a href="#memory">m64</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vroundss_4">| vroundss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
@@ -2270,10 +2312,14 @@ void a(Dst_DECL) {
 | vrsqrtps <a href="#registers">ymm</a>, <a href="#memory">m256</a></pre>
 <pre id="vrsqrtss_3">| vrsqrtss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vrsqrtss <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, dword <a href="#memory">m32</a></pre>
-<pre id="vshufpd_4">| vshufpd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vshufpd <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
-<pre id="vshufps_4">| vshufps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#immediates">imm8</a>
-| vshufps <a href="#registers">reg</a>, <a href="#registers">reg</a>, <a href="#memory">mem</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vshufpd_4">| vshufpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vshufpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vshufpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vshufpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
+<pre id="vshufps_4">| vshufps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#immediates">imm8</a>
+| vshufps <a href="#registers">xmm</a>, <a href="#registers">xmm</a>, <a href="#memory">m128</a>, <a href="#immediates">imm8</a>
+| vshufps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#immediates">imm8</a>
+| vshufps <a href="#registers">ymm</a>, <a href="#registers">ymm</a>, <a href="#memory">m256</a>, <a href="#immediates">imm8</a></pre>
 <pre id="vsqrtpd_2">| vsqrtpd <a href="#registers">xmm</a>, <a href="#registers">xmm</a>
 | vsqrtpd <a href="#registers">xmm</a>, <a href="#memory">m128</a>
 | vsqrtpd <a href="#registers">ymm</a>, <a href="#registers">ymm</a>

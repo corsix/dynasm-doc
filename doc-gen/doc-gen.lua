@@ -336,7 +336,7 @@ local function op_overloads(nparam, pattstr, name)
         patts[i] = a .. b .. suffix
         patts[#patts + 1] = a .. c .. suffix
       else
-        a, b = patts[i]:match"^([rx][rx]+)oy(:.*)"
+        a, b = patts[i]:match"^([rx][rx][rix]*)oy(:.*)"
         if a then
           patts[i] = a .. "o" .. b
           patts[#patts + 1] = a .. "y" .. b

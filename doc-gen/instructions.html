@@ -44,18 +44,21 @@
         <p>The x87 registers can be used by their names <code>st0</code> through <code>st7</code>.</p>
         <p>The SSE registers can be used by their names <code>xmm0</code> through <code>xmm7</code> <span class="badge">x86</span>
            or <code>xmm15</code> <span class="badge">x64</span>.</p>
-        <p>In addition to the static names, the first eight registers from each family can be named dynamically:</p>
+        <p>Similarly, the AVX registers can be used by their names <code>ymm0</code> through <code>ymm7</code> <span class="badge">x86</span>
+           or <code>ymm15</code> <span class="badge">x64</span>.</p>
+        <p>In addition to the static names, the registers from each family can be named dynamically:</p>
         <table class="table table-striped">
         <thead><tr><th>Format</th><th>Indexable Registers</th></tr></thead>
         <tbody>
-          <tr><td><code>Rq(imm3)</code> <span class="badge">x64</span></td><td><code>r0</code> / <code>rax</code> through <code>r7</code> / <code>rdi</code></td></tr>
-          <tr><td><code>Ra(imm3)</code></td><td><code>r0</code> / <code>eax</code> <span class="badge">x86</span> / <code>rax</code> <span class="badge">x64</span> through <code>r7</code> / <code>edi</code> <span class="badge">x86</span> / <code>rdi</code> <span class="badge">x64</span></td></tr>
-          <tr><td><code>Rd(imm3)</code></td><td><code>r0d</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x86</span> / <code>eax</code> through <code>r7d</code> <span class="badge">x64</span> / <code>r7</code> <span class="badge">x86</span> / <code>edi</code></td></tr>
-          <tr><td><code>Rw(imm3)</code></td><td><code>r0w</code> / <code>ax</code> through <code>r7w</code> / <code>di</code></td></tr>
+          <tr><td><code>Rq(imm4)</code> <span class="badge">x64</span></td><td><code>r0</code> / <code>rax</code> through <code>r15</code></td></tr>
+          <tr><td><code>Ra(imm4)</code></td><td><code>r0</code> / <code>eax</code> <span class="badge">x86</span> / <code>rax</code> <span class="badge">x64</span> through <code>r7</code> <span class="badge">x86</span> / <code>edi</code> <span class="badge">x86</span> or <code>r15</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>Rd(imm4)</code></td><td><code>r0d</code> <span class="badge">x64</span> / <code>r0</code> <span class="badge">x86</span> / <code>eax</code> through <code>r7</code> <span class="badge">x86</span> / <code>edi</code> <span class="badge">x86</span> or <code>r15d</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>Rw(imm4)</code></td><td><code>r0w</code> / <code>ax</code> through <code>r7w</code> <span class="badge">x86</span> / <code>di</code> <span class="badge">x86</span> or <code>r15w</code> <span class="badge">x64</span></td></tr>
           <tr><td><code>Rb(imm3)</code> <span class="badge">x86</span></td><td><code>r0b</code> / <code>al</code> through <code>r3b</code> / <code>bl</code>, then <code>ah</code>, <code>ch</code>, <code>dh</code>, <code>bh</code></td></tr>
-          <tr><td><code>Rb(imm2)</code> <span class="badge">x64</span></td><td><code>r0b</code> / <code>al</code> through <code>r3b</code> / <code>bl</code></td></tr>
+          <tr><td><code>Rb(imm4)</code> <span class="badge">x64</span></td><td><code>r0b</code> / <code>al</code> through <code>r15b</code></td></tr>
           <tr><td><code>Rf(imm3)</code></td><td><code>st0</code> through <code>st7</code></td></tr>
-          <tr><td><code>xmm(imm3)</code></td><td><code>xmm0</code> through <code>xmm7</code></td></tr>
+          <tr><td><code>xmm(imm4)</code></td><td><code>xmm0</code> through <code>xmm7</code> <span class="badge">x86</span> or <code>xmm15</code> <span class="badge">x64</span></td></tr>
+          <tr><td><code>ymm(imm4)</code></td><td><code>ymm0</code> through <code>ymm7</code> <span class="badge">x86</span> or <code>ymm15</code> <span class="badge">x64</span></td></tr>
         </tbody>
         </table>
         <p>Where an integer register can be used, it'll be listed as <code>reg</code> or <code>rNN</code>, where <code>NN</code> is the bit width
@@ -136,6 +139,7 @@ void a(Dst_DECL) {
           <tr><td><code>qword&nbsp;</code></td><td>8</td></tr>
           <tr><td><code>tword&nbsp;</code></td><td>10 (used for x87)</td></tr>
           <tr><td><code>oword&nbsp;</code></td><td>16 (used for SSE)</td></tr>
+          <tr><td><code>yword&nbsp;</code></td><td>32 (used for AVX)</td></tr>
         </tbody>
         </table>
         <p>Some instructions will infer the memory size prefix based on the size of other operands.

@@ -143,6 +143,7 @@ local reg0 = {
   [64] = "rax",
   [80] = "st0",
   [128] = "xmm0",
+  [256] = "ymm0",
 }
 local szprefix = {
   [8] = "byte ",
@@ -151,12 +152,15 @@ local szprefix = {
   [64] = "qword ",
   [80] = "tword ",
   [128] = "oword ",
+  [256] = "yword ",
 }
 local operands = {
   r = function(sz)
     if sz then
       if sz == 128 then
         return "xmm"
+      elseif sz == 256 then
+        return "ymm"
       else
         return "r".. sz
       end
@@ -178,6 +182,8 @@ local operands = {
     if sz then
       if sz == 128 then
         return "xmm/m128"
+      elseif sz == 256 then
+        return "ymm/m256"
       else
         return "r/m".. sz
       end
@@ -243,7 +249,7 @@ local operands = {
   end,
 }
 local szbits = {
-  b = 8, w = 16, d = 32, q = 64, t = 80, f = "80f", o = 128
+  b = 8, w = 16, d = 32, q = 64, t = 80, f = "80f", o = 128, y = 256,
 }
 local function explain(nparam, patt)
   if nparam == 0 then
@@ -329,6 +335,12 @@ local function op_overloads(nparam, pattstr, name)
         local suffix = patts[i]:sub(4)
         patts[i] = a .. b .. suffix
         patts[#patts + 1] = a .. c .. suffix
+      else
+        a, b = patts[i]:match"^([rx][rx]+)oy(:.*)"
+        if a then
+          patts[i] = a .. "o" .. b
+          patts[#patts + 1] = a .. "y" .. b
+        end
       end
     end
     for _, patt in ipairs(patts) do
@@ -405,7 +417,7 @@ for _, op in ipairs(ops) do
         overload = overload:gsub("#memory", "%064")
       end
       overload = overload:gsub("lbl", '<a href="#jump-targets">%0</a>')
-      for _, r in ipairs{"reg", "cl", "r%d+", "xmm%d?", "st[x0]"} do
+      for _, r in ipairs{"reg", "cl", "r%d+", "xmm%d?", "ymm%d?", "st[x0]"} do
         overload = overload:gsub(r, '<a href="#registers">%0</a>')
       end
       print("| ".. name .. overload)

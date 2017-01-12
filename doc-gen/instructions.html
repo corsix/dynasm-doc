@@ -181,6 +181,7 @@ void a(Dst_DECL) {
            least once between any <code>&gt;i</code> and <code>&lt;i</code>. Equivalently, this
            last condition means that a <code>&gt;i</code> cannot jump over a <code>&lt;i</code>, and
            vice versa.</p>
+        <p>Note that <code>dasm_setupglobal</code> must be called in order to use local labels.</p>
         <hr>
         <h3 id="global">Global Labels</h3>
         <pre>|-&gt;<em>name</em>:</pre>
